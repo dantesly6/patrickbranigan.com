@@ -1,0 +1,335 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const projects = [
+  {
+    title: 'Workweek Media',
+    role: 'Head of Design',
+    desc: 'Leading design for a media company rethinking how B2B content and community actually work together. Systems, strategy, the whole thing.',
+    url: '#',
+  },
+  {
+    title: 'This site',
+    role: 'Perpetual experiment',
+    desc: 'My corner of the internet. Built it myself. Will probably break it, fix it, and break it again.',
+    url: '#top',
+  },
+];
+
+const writing = [
+  {
+    title: 'First post incoming',
+    date: '2026',
+    desc: "Working on a newsletter about navigating the world of games as an adult — for those who need to but don't want to become experts. Not expecting any of the shit I write to land, but it's a space to try.",
+  },
+];
+
+const playing = [
+  {
+    title: 'Zelda: Tears of the Kingdom',
+    platform: 'Switch',
+    progress: 65,
+    status: 'Exploring everything',
+  },
+  {
+    title: 'FAR: Lone Sails',
+    platform: 'PC',
+    progress: 30,
+    status: 'In progress',
+  },
+];
+
+const now = [
+  'Leading design at Workweek',
+  'Building this site as a playground',
+  'Writing a newsletter (slowly)',
+  'Fantasy Premier League (poorly)',
+  'Looking at watches I can\'t afford',
+];
+---
+
+<Layout>
+  <main class="page">
+
+    <!-- ===== Hero — owns the viewport ===== -->
+    <section class="hero" id="top">
+      <div class="reveal">
+        <h1>Patrick<br/>Branigan</h1>
+      </div>
+      <div class="hero-meta reveal">
+        <p class="hero-bio">
+          I think in systems and first principles — mostly because
+          nothing else has worked. I lead design, build things, play
+          too many games, and I'm figuring out this writing thing.
+        </p>
+        <p class="hero-role">Head of Design at <a href="#" class="link-glow">Workweek</a></p>
+      </div>
+      <nav class="hero-nav reveal" aria-label="Jump to section">
+        <a href="#projects">[Projects]</a>
+        <a href="#writing">[Writing]</a>
+        <a href="#playing">[Playing]</a>
+        <a href="#now">[Now]</a>
+        <a href="#newsletter">[Newsletter]</a>
+      </nav>
+    </section>
+
+    <!-- ===== Projects ===== -->
+    <section id="projects">
+      <p class="section-tag reveal">Things I'm building</p>
+      <div class="stagger">
+        {projects.map((p) => (
+          <a href={p.url} class="project-row">
+            <div>
+              <h2>{p.title}</h2>
+              <p class="project-desc">{p.desc}</p>
+            </div>
+            <span class="mono-sm">{p.role}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <!-- ===== Writing ===== -->
+    <section id="writing">
+      <p class="section-tag reveal">Trying to write</p>
+      <div class="stagger">
+        {writing.map((w) => (
+          <div class="writing-block">
+            <span class="mono-sm">{w.date}</span>
+            <h3>{w.title}</h3>
+            <p>{w.desc}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- ===== Playing ===== -->
+    <section id="playing">
+      <p class="section-tag reveal">What I'm playing</p>
+      <div class="game-inventory stagger">
+        {playing.map((g) => (
+          <div class="game-slot">
+            <div class="game-slot-left">
+              <span class="game-slot-title">{g.title}</span>
+              <div class="game-slot-meta">
+                <span>{g.platform}</span>
+                <span>·</span>
+                <span class="game-slot-status">{g.status}</span>
+              </div>
+            </div>
+            <div class="game-xp-col">
+              <div class="game-xp-track">
+                <div class="game-xp-bar" style={`width: ${g.progress}%`}></div>
+              </div>
+              <span class="game-xp-pct">{g.progress}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- ===== Now ===== -->
+    <section id="now">
+      <p class="section-tag reveal">Right now</p>
+      <ul class="now-list stagger">
+        {now.map((item) => (
+          <li>{item}</li>
+        ))}
+      </ul>
+    </section>
+
+    <!-- ===== Newsletter ===== -->
+    <section id="newsletter" class="newsletter-section">
+      <div class="reveal">
+        <p class="section-tag">Newsletter</p>
+        <h2 class="news-hed">Thinking out loud</h2>
+        <p class="news-desc">
+          Occasional writing on design, games, systems, and whatever I'm
+          chewing on. No spam. Unsubscribe whenever.
+        </p>
+        <form class="news-form" action="#" method="post">
+          <div class="news-row">
+            <input type="email" name="email" placeholder="your@email.com" aria-label="Email address" required />
+            <button type="submit">Subscribe</button>
+          </div>
+          <p class="mono-xs">Beehiiv integration coming soon.</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== Footer ===== -->
+    <footer class="footer reveal">
+      <div class="footer-links">
+        <a href="https://twitter.com/" class="link-glow" target="_blank" rel="noopener">Twitter</a>
+        <a href="https://linkedin.com/" class="link-glow" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="mailto:hello@patrickbranigan.com" class="link-glow">Email</a>
+      </div>
+      <p class="mono-xs">&copy; {new Date().getFullYear()} · Built with care, curiosity, and too much coffee.</p>
+    </footer>
+
+  </main>
+</Layout>
+
+<style>
+  /* ===== Hero ===== */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+    gap: 2.5rem;
+  }
+
+  .hero + section { border-top: 1px solid var(--border); }
+
+  .hero-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 50ch;
+  }
+
+  .hero-bio {
+    font-size: clamp(1rem, 1.6vw, 1.1rem);
+    line-height: 1.75;
+  }
+
+  .hero-role {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  .hero-nav {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+  }
+
+  .hero-nav a {
+    color: var(--text-dim);
+    transition: color 200ms var(--ease), text-shadow 200ms var(--ease);
+  }
+
+  .hero-nav a:hover {
+    color: var(--green);
+    text-shadow: 0 0 12px var(--green-glow);
+  }
+
+  /* ===== Writing ===== */
+  .writing-block {
+    padding: 2rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .writing-block:last-child { border-bottom: none; }
+  .writing-block .mono-sm { display: block; margin-bottom: 0.4rem; }
+  .writing-block h3 { margin-bottom: 0.5rem; }
+
+  /* (game styles moved to global.css as .game-inventory) */
+
+  /* ===== Now ===== */
+  .now-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .now-list li {
+    color: var(--text-mid);
+    padding-left: 1.5rem;
+    position: relative;
+    font-size: 0.95rem;
+  }
+
+  .now-list li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-dim);
+  }
+
+  /* ===== Newsletter ===== */
+  .newsletter-section {
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+  }
+
+  .news-hed { margin-bottom: 0.75rem; }
+  .news-desc { margin-bottom: 1.5rem; max-width: 44ch; }
+
+  .news-form { max-width: 400px; }
+
+  .news-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .news-row input {
+    flex: 1;
+    padding: 0.6rem 0.85rem;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
+  }
+
+  .news-row input::placeholder { color: var(--text-dim); }
+
+  .news-row input:focus {
+    outline: none;
+    border-color: var(--green);
+    box-shadow: 0 0 0 2px var(--green-glow);
+  }
+
+  .news-row button {
+    padding: 0.6rem 1.2rem;
+    background: var(--green);
+    color: var(--bg);
+    border: none;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: box-shadow 200ms var(--ease), transform 150ms ease;
+  }
+
+  .news-row button:hover {
+    box-shadow: 0 0 24px var(--green-glow);
+    transform: translateY(-1px);
+  }
+
+  .news-row button:active { transform: translateY(0); }
+
+  /* ===== Footer ===== */
+  .footer {
+    padding: 5rem 0 2rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 600px) {
+    .hero { min-height: 85vh; gap: 2rem; }
+    .hero-nav { gap: 0.75rem; font-size: 0.7rem; }
+    .news-row { flex-direction: column; }
+    .footer-links { flex-direction: column; gap: 0.75rem; }
+  }
+
+</style>
