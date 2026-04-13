@@ -26,32 +26,31 @@ const writing = [
 
 const playing = [
   {
-    title: 'Zelda: Tears of the Kingdom',
-    platform: 'Switch',
-    progress: 65,
-    status: 'Exploring everything',
+    title: 'Battlefield 6',
+    platform: 'PC',
+    rating: 0,
+    status: '',
   },
   {
-    title: 'FAR: Lone Sails',
-    platform: 'PC',
-    progress: 30,
-    status: 'In progress',
+    title: 'Resident Evil Requiem',
+    platform: 'Switch',
+    rating: 0,
+    status: '',
+  },
+  {
+    title: 'Pokemon Pokopia',
+    platform: 'Switch',
+    rating: 0,
+    status: '',
   },
 ];
 
-const now = [
-  'Leading design at Workweek',
-  'Building this site as a playground',
-  'Writing a newsletter (slowly)',
-  'Fantasy Premier League (poorly)',
-  'Looking at watches I can\'t afford',
-];
 ---
 
 <Layout>
   <main class="page">
 
-    <!-- ===== Hero — owns the viewport ===== -->
+    <!-- ===== Hero ===== -->
     <section class="hero" id="top">
       <div class="reveal">
         <h1>Patrick<br/>Branigan</h1>
@@ -65,25 +64,22 @@ const now = [
         <p class="hero-role">Head of Design at <a href="#" class="link-glow">Workweek</a></p>
       </div>
       <nav class="hero-nav reveal" aria-label="Jump to section">
-        <a href="#projects">[Projects]</a>
-        <a href="#writing">[Writing]</a>
-        <a href="#playing">[Playing]</a>
-        <a href="#now">[Now]</a>
-        <a href="#newsletter">[Newsletter]</a>
+        <a href="#projects">/Building</a>
+        <a href="#writing">/Writing</a>
+        <a href="#playing">/Playing</a>
+        <a href="#newsletter">/Pressing Pause</a>
       </nav>
     </section>
 
     <!-- ===== Projects ===== -->
     <section id="projects">
       <p class="section-tag reveal">Things I'm building</p>
-      <div class="stagger">
+      <div class="project-grid stagger">
         {projects.map((p) => (
-          <a href={p.url} class="project-row">
-            <div>
-              <h2>{p.title}</h2>
-              <p class="project-desc">{p.desc}</p>
-            </div>
+          <a href={p.url} class="project-card">
             <span class="mono-sm">{p.role}</span>
+            <h2>{p.title}</h2>
+            <p>{p.desc}</p>
           </a>
         ))}
       </div>
@@ -119,29 +115,19 @@ const now = [
             </div>
             <div class="game-xp-col">
               <div class="game-xp-track">
-                <div class="game-xp-bar" style={`width: ${g.progress}%`}></div>
+                <div class="game-xp-bar" style={`width: ${g.rating * 10}%`}></div>
               </div>
-              <span class="game-xp-pct">{g.progress}%</span>
+              <span class="game-xp-pct">{g.rating}/10</span>
             </div>
           </div>
         ))}
       </div>
     </section>
 
-    <!-- ===== Now ===== -->
-    <section id="now">
-      <p class="section-tag reveal">Right now</p>
-      <ul class="now-list stagger">
-        {now.map((item) => (
-          <li>{item}</li>
-        ))}
-      </ul>
-    </section>
-
     <!-- ===== Newsletter ===== -->
     <section id="newsletter" class="newsletter-section">
       <div class="reveal">
-        <p class="section-tag">Newsletter</p>
+        <p class="section-tag">Pressing Pause</p>
         <h2 class="news-hed">Thinking out loud</h2>
         <p class="news-desc">
           Occasional writing on design, games, systems, and whatever I'm
@@ -179,10 +165,8 @@ const now = [
     justify-content: center;
     padding-top: 4rem;
     padding-bottom: 4rem;
-    gap: 2.5rem;
+    gap: 3rem;
   }
-
-  .hero + section { border-top: 1px solid var(--border); }
 
   .hero-meta {
     display: flex;

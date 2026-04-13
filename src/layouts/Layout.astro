@@ -32,7 +32,6 @@ const {
     <canvas id="particles"></canvas>
     <div class="spotlight" id="spotlight"></div>
     <div class="cursor" id="cursor"></div>
-    <div class="scroll-bar" id="scrollbar"></div>
 
     <slot />
 
@@ -42,7 +41,16 @@ const {
         <span class="hud-dot"></span>
         <span id="hud-status">online</span>
       </div>
-      <span id="hud-phrase"></span>
+      <span id="hud-phrase" class="hud-prompt"></span>
+    </div>
+
+    <!-- Dialogue overlay -->
+    <div class="dialogue" id="dialogue">
+      <div class="dialogue-inner">
+        <p class="dialogue-q" id="dialogue-q"></p>
+        <p class="dialogue-a" id="dialogue-a"></p>
+        <span class="dialogue-hint mono-xs" id="dialogue-hint">[click to skip]</span>
+      </div>
     </div>
 
     <script>
@@ -80,7 +88,7 @@ const {
       animateCursor();
 
       // Cursor hover state on interactive elements
-      document.querySelectorAll('a, button, .project-row, .game-slot').forEach((el) => {
+      document.querySelectorAll('a, button, .project-card, .game-slot').forEach((el) => {
         el.addEventListener('mouseenter', () => cursor?.classList.add('hovering'));
         el.addEventListener('mouseleave', () => cursor?.classList.remove('hovering'));
       });
@@ -130,11 +138,43 @@ const {
         return `${r}, ${g}, ${b}`;
       }
 
+      let prevScrollY = window.scrollY;
+      let scrollForce = 0;
+
       function drawParticles() {
         if (!ctx) return;
         ctx.clearRect(0, 0, W, H);
+
+        // Scroll-reactive force — particles resist your movement
+        const currentScrollY = window.scrollY;
+        const scrollDelta = currentScrollY - prevScrollY;
+        prevScrollY = currentScrollY;
+        scrollForce += (scrollDelta - scrollForce) * 0.15;
+
+        // Scroll depth — atmosphere shifts as you move through the page
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        const scrollProgress = maxScroll > 0 ? currentScrollY / maxScroll : 0;
+
+        // Ambient wind — direction rotates with scroll depth
+        const time = performance.now() * 0.001;
+        const windAngle = scrollProgress * Math.PI;
+        const windX = Math.sin(time * 0.3) * 0.003 + Math.cos(windAngle) * 0.002;
+        const windY = Math.cos(time * 0.2) * 0.002 + Math.sin(windAngle) * 0.002;
+
+        // Particles dim and slow as you go deeper
+        const depthDim = 1 - scrollProgress * 0.25;
+        const depthDamp = 0.97 + scrollProgress * 0.015;
+
         const rgb = getParticleRGB();
         for (const p of particles) {
+          // Scroll displacement
+          p.vy -= scrollForce * 0.02;
+          p.vx += (Math.random() - 0.5) * Math.abs(scrollForce) * 0.008;
+
+          // Ambient drift
+          p.vx += windX;
+          p.vy += windY;
+
           // Cursor repulsion
           const dx = p.x - mx;
           const dy = p.y - my;
@@ -144,8 +184,8 @@ const {
             p.vx += (dx / dist) * force;
             p.vy += (dy / dist) * force;
           }
-          p.vx *= 0.97;
-          p.vy *= 0.97;
+          p.vx *= depthDamp;
+          p.vy *= depthDamp;
           p.x += p.vx;
           p.y += p.vy;
           // Wrap around
@@ -156,7 +196,7 @@ const {
 
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${rgb}, ${p.a})`;
+          ctx.fillStyle = `rgba(${rgb}, ${p.a * depthDim})`;
           ctx.fill();
         }
         requestAnimationFrame(drawParticles);
@@ -170,15 +210,6 @@ const {
       }
 
       // ============================
-      // Scroll progress
-      // ============================
-      const bar = document.getElementById('scrollbar');
-      window.addEventListener('scroll', () => {
-        const max = document.documentElement.scrollHeight - window.innerHeight;
-        if (bar && max > 0) bar.style.width = ((window.scrollY / max) * 100) + '%';
-      }, { passive: true });
-
-      // ============================
       // Scroll reveal
       // ============================
       const obs = new IntersectionObserver(
@@ -190,15 +221,141 @@ const {
       document.querySelectorAll('.reveal, .stagger').forEach((el) => obs.observe(el));
 
       // ============================
-      // HUD rotating phrases
+      // HUD dialogue system — gaming Q&A
       // ============================
-      const phrases = ['Right on.', 'Go, go, go.', 'Hell yeah.', 'I suspect...', 'Shahavalook.'];
-      let pi = 0;
+      interface QA { q: string; a: string; hint?: boolean; }
+      const questions: QA[] = [
+        { q: 'A game I\'d play for the first time again?', a: '[Answer coming soon]' },
+        { q: 'Most overrated game of all time?', a: '[Answer coming soon]' },
+        { q: 'A game everyone loved that I couldn\'t get into?', a: '[Answer coming soon]' },
+        { q: 'Best video game soundtrack ever?', a: '[Answer coming soon]' },
+        { q: 'What dead game deserves a revival?', a: '[Answer coming soon]' },
+        { q: 'Most emotionally devastating game moment?', a: '[Answer coming soon]' },
+        { q: 'Do games need to be fun to be good?', a: '[Answer coming soon]' },
+        { q: 'A masterpiece most people haven\'t played?', a: '[Answer coming soon]' },
+        { q: 'Best opening sequence in gaming?', a: '[Answer coming soon]' },
+        { q: 'Should every game have an easy mode?', a: '[Answer coming soon]' },
+        { q: 'What beloved game has aged the worst?', a: '[Answer coming soon]' },
+        { q: 'Most satisfying gameplay loop ever?', a: '[Answer coming soon]' },
+        { q: 'Are open-world games getting worse?', a: '[Answer coming soon]' },
+        { q: 'Most perfect video game ending?', a: '[Answer coming soon]' },
+        { q: 'My hill to die on in gaming?', a: '[Answer coming soon]' },
+        { q: 'A game I keep coming back to?', a: '[Answer coming soon]' },
+        { q: 'Is nostalgia why people prefer older games?', a: '[Answer coming soon]' },
+        { q: 'A hated game I\'ll always defend?', a: '[Answer coming soon]' },
+        { q: 'A game for someone who hates games?', a: '[Answer coming soon]' },
+        { q: 'Greatest video game villain?', a: '[Answer coming soon]' },
+        { q: '↑ ↑ ↓ ↓ ← → ← → B A', a: '', hint: true },
+      ];
+
       const pEl = document.getElementById('hud-phrase');
-      if (pEl) {
-        pEl.textContent = phrases[0];
-        setInterval(() => { pi = (pi + 1) % phrases.length; pEl.textContent = phrases[pi]; }, 6000);
+      const dialogueEl = document.getElementById('dialogue');
+      const dialogueQ = document.getElementById('dialogue-q');
+      const dialogueA = document.getElementById('dialogue-a');
+      const dialogueHint = document.getElementById('dialogue-hint');
+      let qIndex = 0;
+      let dialogueOpen = false;
+      let typing = false;
+      let typeInterval = 0;
+      let fullText = '';
+
+      // Shuffle questions (Fisher-Yates) but keep hint at end
+      const hintQ = questions.pop()!;
+      for (let i = questions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [questions[i], questions[j]] = [questions[j], questions[i]];
       }
+      // Insert hint at a random spot in the back half
+      questions.splice(Math.floor(questions.length * 0.6) + Math.floor(Math.random() * (questions.length * 0.4)), 0, hintQ);
+
+      function showPrompt() {
+        if (!pEl || dialogueOpen) return;
+        const q = questions[qIndex];
+        pEl.style.opacity = '0';
+        setTimeout(() => {
+          pEl.textContent = q.hint ? q.q : q.q + ' →';
+          pEl.style.opacity = '1';
+        }, 300);
+      }
+
+      // Rotate questions every 8s
+      showPrompt();
+      setInterval(() => {
+        if (!dialogueOpen) {
+          qIndex = (qIndex + 1) % questions.length;
+          showPrompt();
+        }
+      }, 8000);
+
+      // Typewriter
+      function typewrite(el: HTMLElement, text: string, speed = 25) {
+        fullText = text;
+        typing = true;
+        el.textContent = '';
+        el.classList.remove('done');
+        let i = 0;
+        typeInterval = window.setInterval(() => {
+          el.textContent += text[i];
+          i++;
+          if (i >= text.length) {
+            clearInterval(typeInterval);
+            typing = false;
+            el.classList.add('done');
+            if (dialogueHint) dialogueHint.textContent = '[click to close]';
+          }
+        }, speed);
+      }
+
+      function skipType() {
+        if (!dialogueA) return;
+        clearInterval(typeInterval);
+        dialogueA.textContent = fullText;
+        dialogueA.classList.add('done');
+        typing = false;
+        if (dialogueHint) dialogueHint.textContent = '[click to close]';
+      }
+
+      function openDialogue() {
+        const q = questions[qIndex];
+        if (q.hint || !dialogueEl || !dialogueQ || !dialogueA) return;
+        dialogueQ.textContent = q.q;
+        dialogueA.textContent = '';
+        dialogueA.classList.remove('done');
+        if (dialogueHint) dialogueHint.textContent = '[click to skip]';
+        dialogueEl.classList.add('open');
+        dialogueOpen = true;
+        setTimeout(() => typewrite(dialogueA, q.a, 25), 500);
+      }
+
+      function closeDialogue() {
+        if (!dialogueEl) return;
+        clearInterval(typeInterval);
+        typing = false;
+        dialogueEl.classList.remove('open');
+        dialogueOpen = false;
+        // Advance to next question after closing
+        setTimeout(() => {
+          qIndex = (qIndex + 1) % questions.length;
+          showPrompt();
+        }, 800);
+      }
+
+      // Click prompt to open, click overlay to skip/close
+      pEl?.addEventListener('click', () => {
+        if (!dialogueOpen) openDialogue();
+      });
+
+      dialogueEl?.addEventListener('click', () => {
+        if (typing) skipType();
+        else closeDialogue();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (!dialogueOpen) return;
+        if (e.key === 'Escape') { closeDialogue(); return; }
+        if (typing) skipType();
+        else closeDialogue();
+      });
 
       // ============================
       // Konami code — toggles player 1 / player 2
