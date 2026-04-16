@@ -37,10 +37,7 @@ const {
 
     <!-- HUD -->
     <div class="hud" aria-hidden="true">
-      <div class="hud-left">
-        <span class="hud-dot"></span>
-        <span id="hud-status">online</span>
-      </div>
+      <span class="hud-dot"></span>
       <span id="hud-phrase" class="hud-prompt"></span>
     </div>
 
@@ -53,12 +50,78 @@ const {
       </div>
     </div>
 
+    <!-- Project filmstrip overlay -->
+    <div class="filmstrip" id="project-overlay">
+      <div class="filmstrip-track" id="filmstrip-track">
+        <!-- First panel: project text -->
+        <div class="filmstrip-panel filmstrip-text">
+          <div class="filmstrip-text-inner">
+            <span class="mono-sm" id="project-overlay-role"></span>
+            <p class="dialogue-q" id="project-overlay-title"></p>
+            <p class="dialogue-a done" id="project-overlay-desc"></p>
+            <span class="dialogue-hint mono-xs">scroll to explore ↓</span>
+          </div>
+        </div>
+        <!-- Image panels (populated by JS) -->
+        <div class="filmstrip-panel filmstrip-img" id="filmstrip-img-1"></div>
+        <div class="filmstrip-panel filmstrip-img" id="filmstrip-img-2"></div>
+        <div class="filmstrip-panel filmstrip-img" id="filmstrip-img-3"></div>
+        <div class="filmstrip-panel filmstrip-img" id="filmstrip-img-4"></div>
+      </div>
+      <button class="filmstrip-close" id="filmstrip-close" aria-label="Close">&times;</button>
+    </div>
+
     <script>
       // ============================
       // Boot sequence
       // ============================
       const boot = document.getElementById('boot');
       setTimeout(() => boot?.classList.add('done'), 1800);
+
+      // ============================
+      // Text scramble effect
+      // ============================
+      const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$&';
+
+      function scramble(el: HTMLElement, text: string, staggerMs = 30) {
+        const letters = text.split('');
+        const current = letters.map(c =>
+          c === ' ' ? ' ' : SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)]
+        );
+        el.textContent = current.join('');
+
+        const intervals: number[] = [];
+        letters.forEach((letter, i) => {
+          if (letter === ' ') return;
+          const flicker = window.setInterval(() => {
+            current[i] = SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+            el.textContent = current.join('');
+          }, 40);
+          intervals.push(flicker);
+
+          setTimeout(() => {
+            clearInterval(flicker);
+            current[i] = letter;
+            el.textContent = current.join('');
+          }, i * staggerMs + 200 + Math.random() * 300);
+        });
+      }
+
+      // Scramble h1 after boot
+      const h1Spans = document.querySelectorAll('.scramble-text');
+      h1Spans.forEach(span => {
+        const text = (span as HTMLElement).dataset.text || '';
+        (span as HTMLElement).textContent = text.split('').map(() =>
+          SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)]
+        ).join('');
+      });
+
+      setTimeout(() => {
+        h1Spans.forEach(span => {
+          const el = span as HTMLElement;
+          scramble(el, el.dataset.text || '', 50);
+        });
+      }, 2000);
 
       // ============================
       // Custom cursor + spotlight
@@ -214,11 +277,92 @@ const {
       // ============================
       const obs = new IntersectionObserver(
         (entries) => entries.forEach((e) => {
-          if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); }
+          if (e.isIntersecting) {
+            e.target.classList.add('vis');
+            if (e.target.classList.contains('section-tag')) {
+              const el = e.target as HTMLElement;
+              const original = el.textContent || '';
+              scramble(el, original, 35);
+            }
+            obs.unobserve(e.target);
+          }
         }),
         { threshold: 0.06, rootMargin: '0px 0px -30px 0px' }
       );
       document.querySelectorAll('.reveal, .stagger').forEach((el) => obs.observe(el));
+
+      // ============================
+      // Writing log overlay
+      // ============================
+      const writingOverlay = document.getElementById('writing-overlay');
+      const writingList = document.getElementById('writing-list');
+      const writingDetail = document.getElementById('writing-detail');
+      const writingDetailDate = document.getElementById('writing-detail-date');
+      const writingDetailTitle = document.getElementById('writing-detail-title');
+      const writingDetailDesc = document.getElementById('writing-detail-desc');
+      const writingBack = document.getElementById('writing-back');
+      const writingClose = document.getElementById('writing-overlay-close');
+      let writingOpen = false;
+      const FADE_MS = 400;
+
+      function showWritingList() {
+        writingDetail?.classList.add('fade-out');
+        setTimeout(() => {
+          writingList?.classList.remove('fade-out');
+          writingOverlay!.scrollTop = 0;
+        }, FADE_MS);
+      }
+
+      function showWritingDetail(date: string, title: string, desc: string) {
+        if (!writingDetailDate || !writingDetailTitle || !writingDetailDesc) return;
+        writingList?.classList.add('fade-out');
+        setTimeout(() => {
+          writingDetailDate.textContent = date;
+          writingDetailTitle.textContent = title;
+          writingDetailDesc.textContent = desc;
+          writingDetail?.classList.remove('fade-out');
+          writingOverlay!.scrollTop = 0;
+        }, FADE_MS);
+      }
+
+      document.getElementById('open-writing-log')?.addEventListener('click', () => {
+        if (!writingOverlay) return;
+        writingList?.classList.remove('fade-out');
+        writingDetail?.classList.add('fade-out');
+        writingOverlay.scrollTop = 0;
+        writingOverlay.classList.add('open');
+        writingOpen = true;
+      });
+
+      function closeWritingOverlay() {
+        writingOverlay?.classList.remove('open');
+        writingOpen = false;
+      }
+
+      writingClose?.addEventListener('click', closeWritingOverlay);
+
+      document.addEventListener('keydown', (e) => {
+        if (writingOpen && e.key === 'Escape') {
+          if (!writingDetail?.classList.contains('fade-out')) {
+            showWritingList();
+          } else {
+            closeWritingOverlay();
+          }
+        }
+      });
+
+      document.querySelectorAll('.writing-list-item').forEach((item) => {
+        item.addEventListener('click', () => {
+          const el = item as HTMLElement;
+          showWritingDetail(
+            el.dataset.writingDate || '',
+            el.dataset.writingTitle || '',
+            el.dataset.writingDesc || ''
+          );
+        });
+      });
+
+      writingBack?.addEventListener('click', showWritingList);
 
       // ============================
       // HUD dialogue system — gaming Q&A
@@ -268,14 +412,20 @@ const {
       // Insert hint at a random spot in the back half
       questions.splice(Math.floor(questions.length * 0.6) + Math.floor(Math.random() * (questions.length * 0.4)), 0, hintQ);
 
+      let promptInterval = 0;
+
       function showPrompt() {
         if (!pEl || dialogueOpen) return;
+        clearInterval(promptInterval);
         const q = questions[qIndex];
-        pEl.style.opacity = '0';
-        setTimeout(() => {
-          pEl.textContent = q.hint ? q.q : q.q + ' →';
-          pEl.style.opacity = '1';
-        }, 300);
+        const text = q.hint ? q.q : q.q + ' →';
+        pEl.textContent = '';
+        let i = 0;
+        promptInterval = window.setInterval(() => {
+          pEl.textContent += text[i];
+          i++;
+          if (i >= text.length) clearInterval(promptInterval);
+        }, 35);
       }
 
       // Rotate questions every 8s
@@ -358,6 +508,102 @@ const {
       });
 
       // ============================
+      // Project overlay
+      // ============================
+      const projOverlay = document.getElementById('project-overlay');
+      const projTitle = document.getElementById('project-overlay-title');
+      const projRole = document.getElementById('project-overlay-role');
+      const projDesc = document.getElementById('project-overlay-desc');
+      let projOpen = false;
+
+      const filmstripClose = document.getElementById('filmstrip-close');
+
+      document.querySelectorAll('.project-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          const el = card as HTMLElement;
+          if (!projOverlay || !projTitle || !projRole || !projDesc) return;
+          projRole.textContent = '';
+          projDesc.textContent = el.dataset.desc || '';
+          projTitle.textContent = el.dataset.project || '';
+          projOverlay.scrollTop = 0;
+          projOverlay.classList.add('open');
+          projOpen = true;
+        });
+      });
+
+      function closeProject() {
+        projOverlay?.classList.remove('open');
+        projOpen = false;
+      }
+
+      // Drag-to-scroll on filmstrip (vertical)
+      if (projOverlay) {
+        let isDragging = false;
+        let dragStartY = 0;
+        let dragScrollStart = 0;
+        let hasDragged = false;
+        let lastY = 0;
+        let velocity = 0;
+
+        // Panel snap positions: first panel is shorter (100vh - 80px), rest are 100vh
+        function nearestPanel(scrollPos: number): number {
+          const vh = window.innerHeight;
+          const firstH = vh - 80;
+          if (scrollPos < firstH / 2) return 0;
+          const pastFirst = scrollPos - firstH;
+          const idx = Math.round(pastFirst / vh);
+          return firstH + Math.max(0, idx) * vh;
+        }
+
+        projOverlay.addEventListener('mousedown', (e: MouseEvent) => {
+          if ((e.target as HTMLElement).closest('.filmstrip-close')) return;
+          isDragging = true;
+          hasDragged = false;
+          dragStartY = e.pageY;
+          lastY = e.pageY;
+          velocity = 0;
+          dragScrollStart = projOverlay.scrollTop;
+          projOverlay.classList.add('grabbing');
+        });
+
+        window.addEventListener('mousemove', (e: MouseEvent) => {
+          if (!isDragging) return;
+          const dy = e.pageY - dragStartY;
+          velocity = lastY - e.pageY;
+          lastY = e.pageY;
+          if (Math.abs(dy) > 5) hasDragged = true;
+          projOverlay.scrollTop = dragScrollStart - dy;
+        });
+
+        window.addEventListener('mouseup', () => {
+          if (!isDragging) return;
+          isDragging = false;
+          projOverlay.classList.remove('grabbing');
+          // Smooth scroll to nearest panel, factoring in momentum
+          const projected = projOverlay.scrollTop + velocity * 8;
+          const target = nearestPanel(projected);
+          projOverlay.scrollTo({ top: target, behavior: 'smooth' });
+        });
+
+        // Prevent click-to-close when user was dragging
+        projOverlay.addEventListener('click', (e: MouseEvent) => {
+          if (hasDragged) {
+            e.stopPropagation();
+            hasDragged = false;
+          }
+        }, true);
+      }
+
+      filmstripClose?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeProject();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (projOpen && e.key === 'Escape') closeProject();
+      });
+
+      // ============================
       // Konami code — toggles player 1 / player 2
       // ============================
       const seq = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
@@ -374,8 +620,6 @@ const {
         document.documentElement.style.setProperty('--green-dim', t.dim);
         // Update particle color reference
         (window as any).__particleColor = t.green;
-        const ht = document.getElementById('hud-status');
-        if (ht) ht.textContent = player2 ? 'player 2' : 'online';
       }
 
       function showToast(msg: string, color: string) {

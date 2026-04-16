@@ -3,47 +3,142 @@ import Layout from '../layouts/Layout.astro';
 
 const projects = [
   {
-    title: 'Workweek Media',
-    role: 'Head of Design',
+    company: 'Workweek Media',
+    role: 'Founding Product Designer',
+    summary: 'Rethinking how B2B content and community actually work together.',
+    project: 'Workweek Media',
     desc: 'Leading design for a media company rethinking how B2B content and community actually work together. Systems, strategy, the whole thing.',
-    url: '#',
   },
   {
-    title: 'This site',
-    role: 'Perpetual experiment',
-    desc: 'My corner of the internet. Built it myself. Will probably break it, fix it, and break it again.',
-    url: '#top',
+    company: 'Chaotic Games',
+    role: 'Head of Product Design',
+    summary: 'A browser-based AAA game engine that was adopted by 3 studios in 12 months.',
+    project: 'Chaotic Game Engine',
+    desc: 'Game engines are bloated, expensive, and inaccessible to much of the world. I designed a browser-based engine editor from zero – interface architecture, visual editing and debugging, real-time spatial collaboration, instant deploy to browser, and more. All prioritized by real studio user feedback. Users shipped playable builds 25% faster, at AAA fidelity, to be shared and experienced by anyone with a URL link. It grew Chaotic from 0 to 3 studio partners in 12 months.',
+  },
+  {
+    company: 'Ribbon Home',
+    role: 'Staff Product Designer',
+    summary: 'A cash offer app that helped grow revenue to $38M and led to acquisition.',
+    project: 'Ribbon Cash',
+    desc: 'Making cash offers on homes was slow, manual, and painful for everyone involved. I designed the Ribbon Cash mobile app end-to-end – modular offer flows, document automation with upload and e-signature, interactive offer summaries, and a unified design system spanning web and mobile. All shaped by research across three audiences: buyers, agents, and loan officers. Revenue grew 7x to $38M in 12 months, leading to an acquisition by EasyKnock.',
   },
 ];
 
 const writing = [
   {
     title: 'First post incoming',
-    date: '2026',
+    date: '2026.04.15 — Entry 020',
     desc: "Working on a newsletter about navigating the world of games as an adult — for those who need to but don't want to become experts. Not expecting any of the shit I write to land, but it's a space to try.",
+  },
+  {
+    title: 'The myth of the casual gamer',
+    date: '2026.04.08 — Entry 019',
+    desc: "Everyone plays games. Most people just don't call themselves gamers. That gap between behavior and identity is where all the interesting design problems live.",
+  },
+  {
+    title: 'Systems that teach without tutorials',
+    date: '2026.03.30 — Entry 018',
+    desc: "The best onboarding is invisible. Breath of the Wild drops you on a plateau and lets physics do the teaching. Most SaaS could learn from this.",
+  },
+  {
+    title: 'Why I stopped reading design Twitter',
+    date: '2026.03.22 — Entry 017',
+    desc: "Too much performance, not enough practice. I'd rather spend an hour in Figma making something bad than an hour reading about making something good.",
+  },
+  {
+    title: 'Friction as a feature',
+    date: '2026.03.14 — Entry 016',
+    desc: "Not every interaction needs to be frictionless. Souls games proved that difficulty is a design choice, not a flaw. Sometimes the struggle is the point.",
+  },
+  {
+    title: 'The design system nobody asked for',
+    date: '2026.03.05 — Entry 015',
+    desc: "Built a component library over a weekend. Nobody needed it yet. But the act of building it clarified how I think about the product more than any meeting could.",
+  },
+  {
+    title: 'On shipping scared',
+    date: '2026.02.25 — Entry 014',
+    desc: "If you're not a little embarrassed by what you shipped, you waited too long. The first version of everything I've made has been rough. That's the point.",
+  },
+  {
+    title: 'Game UI is ahead of product UI',
+    date: '2026.02.17 — Entry 013',
+    desc: "HUDs, radial menus, contextual prompts — games solved information density decades ago. Product design is just now catching up.",
+  },
+  {
+    title: 'The newsletter problem',
+    date: '2026.02.08 — Entry 012',
+    desc: "Everyone has a newsletter. Most of them are content marketing wearing a trench coat. I want mine to be something I'd actually read on a Sunday morning.",
+  },
+  {
+    title: 'Designing for people who don\'t read',
+    date: '2026.01.30 — Entry 011',
+    desc: "Nobody reads your copy. They scan. They guess. They tap the biggest button. Design for that reality instead of fighting it.",
+  },
+  {
+    title: 'What speedrunners teach us about UX',
+    date: '2026.01.22 — Entry 010',
+    desc: "Speedrunners find every crack in your system. They're the ultimate edge-case users. Watching them break games taught me more about robust design than any usability study.",
+  },
+  {
+    title: 'The courage to delete features',
+    date: '2026.01.14 — Entry 009',
+    desc: "Addition is easy. Subtraction is where the real design happens. The hardest conversations I've had were about removing something that someone spent months building.",
+  },
+  {
+    title: 'First-principles vs. best practices',
+    date: '2026.01.05 — Entry 008',
+    desc: "Best practices are other people's first principles, frozen in time. They're useful as starting points but dangerous as destinations.",
+  },
+  {
+    title: 'Side quests are the real game',
+    date: '2025.12.28 — Entry 007',
+    desc: "The main quest gives you direction. The side quests give you the world. Same thing in product work — the detours teach you what the roadmap can't.",
+  },
+  {
+    title: 'Why I prototype in code',
+    date: '2025.12.19 — Entry 006',
+    desc: "Figma lies to you. It tells you everything will be smooth and pixel-perfect. Code tells you the truth about what's actually possible in the time you have.",
+  },
+  {
+    title: 'The inventory problem',
+    date: '2025.12.10 — Entry 005',
+    desc: "Every RPG eventually drowns you in loot. Every SaaS eventually drowns you in settings. The design challenge is identical: make abundance feel manageable.",
+  },
+  {
+    title: 'Taste is just pattern recognition',
+    date: '2025.12.02 — Entry 004',
+    desc: "Good taste isn't magic. It's exposure plus memory. The more things you've seen — good and bad — the faster you can tell the difference.",
+  },
+  {
+    title: 'Designing alone vs. designing in public',
+    date: '2025.11.23 — Entry 003',
+    desc: "I spent years polishing work in private before showing anyone. Now I share rough ideas early. The feedback hurts more but the work gets better faster.",
+  },
+  {
+    title: 'Loading screens as design opportunities',
+    date: '2025.11.14 — Entry 002',
+    desc: "Bayonetta lets you practice combos on the loading screen. Most apps show you a spinner. There's a metaphor in there somewhere about respecting people's time.",
+  },
+  {
+    title: 'Why I started writing',
+    date: '2025.11.05 — Entry 001',
+    desc: "Not because I have answers. Because writing forces me to figure out what I actually think instead of just vibing with half-formed opinions.",
   },
 ];
 
+function ratingColor(r: number) {
+  if (r <= 3) return { color: '#ef4444', glow: 'rgba(239,68,68,0.3)' };
+  if (r <= 6) return { color: '#eab308', glow: 'rgba(234,179,8,0.3)' };
+  return { color: 'var(--green)', glow: 'var(--green-glow)' };
+}
+
 const playing = [
-  {
-    title: 'Battlefield 6',
-    platform: 'PC',
-    rating: 0,
-    status: '',
-  },
-  {
-    title: 'Resident Evil Requiem',
-    platform: 'Switch',
-    rating: 0,
-    status: '',
-  },
-  {
-    title: 'Pokemon Pokopia',
-    platform: 'Switch',
-    rating: 0,
-    status: '',
-  },
-];
+  { title: 'Battlefield 6', platform: 'PC', rating: 7, status: '' },
+  { title: 'Resident Evil Requiem', platform: 'Switch', rating: 8, status: '' },
+  { title: 'Pokemon Pokopia', platform: 'Switch', rating: 9, status: '' },
+].map(g => ({ ...g, ...ratingColor(g.rating) }));
 
 ---
 
@@ -53,55 +148,73 @@ const playing = [
     <!-- ===== Hero ===== -->
     <section class="hero" id="top">
       <div class="reveal">
-        <h1>Patrick<br/>Branigan</h1>
+        <h1><span class="scramble-text" data-text="Patrick">Patrick</span><br/><span class="scramble-text" data-text="Branigan">Branigan</span></h1>
       </div>
       <div class="hero-meta reveal">
         <p class="hero-bio">
-          I think in systems and first principles — mostly because
-          nothing else has worked. I lead design, build things, play
-          too many games, and I'm figuring out this writing thing.
+          I take a systematic, first-principles approach to design, breaking problems down to fundamentals and rebuilding solutions in new, sometimes novel, ways. Every design decision I make is rooted in a combination of evidence, practicality, feasibility, delight, purpose, and return.
         </p>
-        <p class="hero-role">Head of Design at <a href="#" class="link-glow">Workweek</a></p>
       </div>
       <nav class="hero-nav reveal" aria-label="Jump to section">
-        <a href="#projects">/Building</a>
-        <a href="#writing">/Writing</a>
-        <a href="#playing">/Playing</a>
-        <a href="#newsletter">/Pressing Pause</a>
+        <a href="#projects" class="link-frame">Building</a>
+        <a href="#writing" class="link-frame">Thinking</a>
+        <a href="#playing" class="link-frame">Playing</a>
+        <a href="#newsletter" class="link-frame">Newsletter</a>
       </nav>
     </section>
 
     <!-- ===== Projects ===== -->
     <section id="projects">
-      <p class="section-tag reveal">Things I'm building</p>
+      <p class="section-tag reveal">Building</p>
       <div class="project-grid stagger">
         {projects.map((p) => (
-          <a href={p.url} class="project-card">
+          <div class="project-card" data-project={p.project} data-role={p.role} data-desc={p.desc}>
             <span class="mono-sm">{p.role}</span>
-            <h2>{p.title}</h2>
-            <p>{p.desc}</p>
-          </a>
+            <h2>{p.company}</h2>
+            <p>{p.summary}</p>
+          </div>
         ))}
       </div>
     </section>
 
     <!-- ===== Writing ===== -->
     <section id="writing">
-      <p class="section-tag reveal">Trying to write</p>
+      <p class="section-tag reveal">Thinking</p>
       <div class="stagger">
-        {writing.map((w) => (
-          <div class="writing-block">
-            <span class="mono-sm">{w.date}</span>
-            <h3>{w.title}</h3>
-            <p>{w.desc}</p>
-          </div>
-        ))}
+        <div class="writing-block">
+          <span class="mono-sm">{writing[0].date}</span>
+          <h3>{writing[0].title}</h3>
+          <p>{writing[0].desc}</p>
+        </div>
+        <span class="link-frame writing-cta" id="open-writing-log">
+          {writing.length} entries logged
+        </span>
       </div>
     </section>
 
+    <!-- Writing log overlay -->
+    <div class="writing-overlay" id="writing-overlay">
+      <button class="filmstrip-close" id="writing-overlay-close" aria-label="Close">&times;</button>
+      <div class="writing-overlay-list" id="writing-list">
+        <p class="section-tag">Log entries</p>
+        {writing.map((w, i) => (
+          <div class="writing-list-item" data-writing-idx={i} data-writing-date={w.date} data-writing-title={w.title} data-writing-desc={w.desc}>
+            <span class="mono-sm">{w.date}</span>
+            <h3>{w.title}</h3>
+          </div>
+        ))}
+      </div>
+      <div class="writing-overlay-detail fade-out" id="writing-detail">
+        <button class="writing-back mono-sm" id="writing-back">← back to log</button>
+        <span class="mono-sm" id="writing-detail-date"></span>
+        <h2 id="writing-detail-title"></h2>
+        <p id="writing-detail-desc"></p>
+      </div>
+    </div>
+
     <!-- ===== Playing ===== -->
     <section id="playing">
-      <p class="section-tag reveal">What I'm playing</p>
+      <p class="section-tag reveal">Playing</p>
       <div class="game-inventory stagger">
         {playing.map((g) => (
           <div class="game-slot">
@@ -115,9 +228,9 @@ const playing = [
             </div>
             <div class="game-xp-col">
               <div class="game-xp-track">
-                <div class="game-xp-bar" style={`width: ${g.rating * 10}%`}></div>
+                <div class="game-xp-bar" style={`width: ${g.rating * 10}%; background: ${g.color}; box-shadow: 0 0 8px ${g.glow}`}></div>
               </div>
-              <span class="game-xp-pct">{g.rating}/10</span>
+              <span class="game-xp-pct" style={`color: ${g.color}`}>{g.rating}/10</span>
             </div>
           </div>
         ))}
@@ -127,7 +240,7 @@ const playing = [
     <!-- ===== Newsletter ===== -->
     <section id="newsletter" class="newsletter-section">
       <div class="reveal">
-        <p class="section-tag">Pressing Pause</p>
+        <p class="section-tag">Newsletter</p>
         <h2 class="news-hed">Thinking out loud</h2>
         <p class="news-desc">
           Occasional writing on design, games, systems, and whatever I'm
@@ -146,9 +259,9 @@ const playing = [
     <!-- ===== Footer ===== -->
     <footer class="footer reveal">
       <div class="footer-links">
-        <a href="https://twitter.com/" class="link-glow" target="_blank" rel="noopener">Twitter</a>
-        <a href="https://linkedin.com/" class="link-glow" target="_blank" rel="noopener">LinkedIn</a>
-        <a href="mailto:hello@patrickbranigan.com" class="link-glow">Email</a>
+        <a href="https://twitter.com/" class="link-frame" target="_blank" rel="noopener">Twitter</a>
+        <a href="https://linkedin.com/" class="link-frame" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="mailto:hello@patrickbranigan.com" class="link-frame">Email</a>
       </div>
       <p class="mono-xs">&copy; {new Date().getFullYear()} · Built with care, curiosity, and too much coffee.</p>
     </footer>
@@ -172,11 +285,11 @@ const playing = [
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    max-width: 50ch;
+    max-width: 62ch;
   }
 
   .hero-bio {
-    font-size: clamp(1rem, 1.6vw, 1.1rem);
+    font-size: clamp(1.1rem, 1.8vw, 1.25rem);
     line-height: 1.75;
   }
 
@@ -188,10 +301,10 @@ const playing = [
 
   .hero-nav {
     display: flex;
-    gap: 1.5rem;
+    gap: 2.25rem;
     flex-wrap: wrap;
     font-family: var(--mono);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
 
   .hero-nav a {
@@ -204,15 +317,36 @@ const playing = [
     text-shadow: 0 0 12px var(--green-glow);
   }
 
-  /* ===== Writing ===== */
+  /* ===== Writing — journal log ===== */
   .writing-block {
-    padding: 2rem 0;
-    border-bottom: 1px solid var(--border);
+    padding: 2rem;
+    border: 1px solid var(--border);
+    margin-bottom: 1.5rem;
   }
 
-  .writing-block:last-child { border-bottom: none; }
-  .writing-block .mono-sm { display: block; margin-bottom: 0.4rem; }
+  .writing-block .mono-sm {
+    display: block;
+    margin-bottom: 0.6rem;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green-glow);
+    letter-spacing: 0.08em;
+  }
+
   .writing-block h3 { margin-bottom: 0.5rem; }
+
+  .writing-cta {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 2px 6px;
+    transition: color 200ms var(--ease), text-shadow 200ms var(--ease);
+  }
+
+  .writing-cta:hover {
+    color: var(--green);
+    text-shadow: 0 0 12px var(--green-glow);
+  }
 
   /* (game styles moved to global.css as .game-inventory) */
 
