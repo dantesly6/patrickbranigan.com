@@ -8,6 +8,7 @@ const projects = [
     summary: 'Rethinking how B2B content and community actually work together.',
     project: 'Workweek Media',
     desc: 'Leading design for a media company rethinking how B2B content and community actually work together. Systems, strategy, the whole thing.',
+    images: [] as string[],
   },
   {
     company: 'Chaotic Games',
@@ -15,6 +16,12 @@ const projects = [
     summary: 'A browser-based AAA game engine that was adopted by 3 studios in 12 months.',
     project: 'Chaotic Game Engine',
     desc: 'Game engines are bloated, expensive, and inaccessible to much of the world. I designed a browser-based engine editor from zero – interface architecture, visual editing and debugging, real-time spatial collaboration, instant deploy to browser, and more. All prioritized by real studio user feedback. Users shipped playable builds 25% faster, at AAA fidelity, to be shared and experienced by anyone with a URL link. It grew Chaotic from 0 to 3 studio partners in 12 months.',
+    images: [
+      '/images/projects/chaotic/hero.png',
+      '/images/projects/chaotic/content-drawer.png',
+      '/images/projects/chaotic/comments.png',
+      '/images/projects/chaotic/vfx.png',
+    ],
   },
   {
     company: 'Ribbon Home',
@@ -22,6 +29,12 @@ const projects = [
     summary: 'A cash offer app that helped grow revenue to $38M and led to acquisition.',
     project: 'Ribbon Cash',
     desc: 'Making cash offers on homes was slow, manual, and painful for everyone involved. I designed the Ribbon Cash mobile app end-to-end – modular offer flows, document automation with upload and e-signature, interactive offer summaries, and a unified design system spanning web and mobile. All shaped by research across three audiences: buyers, agents, and loan officers. Revenue grew 7x to $38M in 12 months, leading to an acquisition by EasyKnock.',
+    images: [
+      '/images/projects/ribbon/hero.png',
+      '/images/projects/ribbon/devices.png',
+      '/images/projects/ribbon/desktop.png',
+      '/images/projects/ribbon/collage.png',
+    ],
   },
 ];
 
@@ -168,7 +181,7 @@ const playing = [
       <p class="section-tag reveal">Building</p>
       <div class="project-grid stagger">
         {projects.map((p) => (
-          <div class="project-card" data-project={p.project} data-role={p.role} data-desc={p.desc}>
+          <div class="project-card" data-project={p.project} data-role={p.role} data-desc={p.desc} data-images={JSON.stringify(p.images)}>
             <span class="mono-sm">{p.role}</span>
             <h2>{p.company}</h2>
             <p>{p.summary}</p>

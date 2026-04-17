@@ -525,6 +525,24 @@ const {
           projRole.textContent = '';
           projDesc.textContent = el.dataset.desc || '';
           projTitle.textContent = el.dataset.project || '';
+
+          // Populate filmstrip image panels
+          const images: string[] = JSON.parse(el.dataset.images || '[]');
+          for (let i = 1; i <= 4; i++) {
+            const panel = document.getElementById(`filmstrip-img-${i}`);
+            if (!panel) continue;
+            if (images[i - 1]) {
+              panel.style.backgroundImage = `url(${images[i - 1]})`;
+              panel.style.backgroundSize = 'contain';
+              panel.style.backgroundPosition = 'center';
+              panel.style.backgroundRepeat = 'no-repeat';
+              panel.classList.add('has-image');
+            } else {
+              panel.style.backgroundImage = '';
+              panel.classList.remove('has-image');
+            }
+          }
+
           projOverlay.scrollTop = 0;
           projOverlay.classList.add('open');
           projOpen = true;
