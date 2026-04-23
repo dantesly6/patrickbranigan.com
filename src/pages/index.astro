@@ -19,10 +19,11 @@ const projects = [
     desc: 'Game engines are bloated, expensive, and inaccessible to much of the world. I designed a browser-based engine editor from zero – interface architecture, visual editing and debugging, real-time spatial collaboration, instant deploy to browser, and more. All prioritized by real studio user feedback. Users shipped playable builds 25% faster, at AAA fidelity, to be shared and experienced by anyone with a URL link. It grew Chaotic from 0 to 3 studio partners in 12 months.',
     tools: ['Figma', 'Gaea', 'Chaotic Engine', 'UE5'],
     images: [
-      '/images/projects/chaotic/editor.png',
-      '/images/projects/chaotic/modules.png',
-      '/images/projects/chaotic/animation.png',
-      '/images/projects/chaotic/collaboration.png',
+      '/images/projects/chaotic/reel.mp4',
+      '/images/projects/chaotic/viewport.png',
+      '/images/projects/chaotic/vfx.png',
+      '/images/projects/chaotic/comments.png',
+      '/images/projects/chaotic/content-module.png',
     ],
   },
   {
@@ -33,11 +34,11 @@ const projects = [
     desc: 'Making cash offers on homes was slow, manual, and painful for everyone involved. I designed the Ribbon Cash mobile app end-to-end – modular offer flows, document automation with upload and e-signature, interactive offer summaries, and a unified design system spanning web and mobile. All shaped by research across three audiences: buyers, agents, and loan officers. Revenue grew 7x to $38M in 12 months, leading to an acquisition by EasyKnock.',
     tools: ['Figma', 'Miro', 'Storybook'],
     images: [
-      '/images/projects/ribbon/hero.png',
-      '/images/projects/ribbon/devices.png',
-      '/images/projects/ribbon/desktop.png',
-      '/images/projects/ribbon/collage.png',
-    ],
+      { src: ['/images/projects/ribbon/pages.mp4', '/images/projects/ribbon/details-nav.mp4'], frame: 'light' as const },
+      '/images/projects/ribbon/cashapp.png',
+      '/images/projects/ribbon/hub-home.png',
+      '/images/projects/ribbon/ui-elements.png',
+    ] as Array<string | { src: string | string[]; frame?: 'light' }>,
   },
 ];
 

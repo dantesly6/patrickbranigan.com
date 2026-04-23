@@ -64,11 +64,7 @@ const {
             <span class="dialogue-hint mono-xs">scroll to explore ↓</span>
           </div>
         </div>
-        <!-- Image panels (populated by JS) -->
-        <div class="filmstrip-panel filmstrip-img" id="filmstrip-img-1"></div>
-        <div class="filmstrip-panel filmstrip-img" id="filmstrip-img-2"></div>
-        <div class="filmstrip-panel filmstrip-img" id="filmstrip-img-3"></div>
-        <div class="filmstrip-panel filmstrip-img" id="filmstrip-img-4"></div>
+        <!-- Image/video panels populated by JS -->
       </div>
       <button class="filmstrip-close" id="filmstrip-close" aria-label="Close">&times;</button>
     </div>
@@ -620,21 +616,58 @@ const {
               : '';
           }
 
-          // Populate filmstrip image panels
-          const images: string[] = JSON.parse(el.dataset.images || '[]');
-          for (let i = 1; i <= 4; i++) {
-            const panel = document.getElementById(`filmstrip-img-${i}`);
-            if (!panel) continue;
-            if (images[i - 1]) {
-              panel.style.backgroundImage = `url(${images[i - 1]})`;
-              panel.style.backgroundSize = 'contain';
-              panel.style.backgroundPosition = 'center';
-              panel.style.backgroundRepeat = 'no-repeat';
-              panel.classList.add('has-image');
-            } else {
-              panel.style.backgroundImage = '';
-              panel.classList.remove('has-image');
+          // Populate filmstrip image/video panels dynamically
+          type MediaItem = string | { src: string | string[]; frame?: 'light' };
+          const images: MediaItem[] = JSON.parse(el.dataset.images || '[]');
+          const track = document.getElementById('filmstrip-track');
+
+          function createMedia(src: string): HTMLElement {
+            const isVideo = /\.(mp4|webm|mov)$/i.test(src);
+            if (isVideo) {
+              const v = document.createElement('video');
+              v.src = src;
+              v.autoplay = true;
+              v.muted = true;
+              v.loop = true;
+              v.playsInline = true;
+              v.setAttribute('playsinline', '');
+              v.setAttribute('preload', 'metadata');
+              return v;
             }
+            const img = document.createElement('img');
+            img.src = src;
+            img.loading = 'lazy';
+            return img;
+          }
+
+          if (track) {
+            track.querySelectorAll('.filmstrip-img').forEach((n) => n.remove());
+            images.forEach((item) => {
+              const srcVal = typeof item === 'string' ? item : item?.src;
+              const frame = typeof item === 'string' ? undefined : item?.frame;
+              if (!srcVal) return;
+              const sources = Array.isArray(srcVal) ? srcVal : [srcVal];
+              const panel = document.createElement('div');
+              panel.className = 'filmstrip-panel filmstrip-img has-image';
+              if (frame === 'light') panel.classList.add('light-frame');
+              if (sources.length > 1) panel.classList.add('multi');
+
+              if (frame === 'light') {
+                const card = document.createElement('div');
+                card.className = 'light-card';
+                sources.forEach((s) => card.appendChild(createMedia(s)));
+                panel.appendChild(card);
+              } else if (sources.length === 1 && !/\.(mp4|webm|mov)$/i.test(sources[0])) {
+                // Single image: keep background-image for crispness
+                panel.style.backgroundImage = `url(${sources[0]})`;
+                panel.style.backgroundSize = 'contain';
+                panel.style.backgroundPosition = 'center';
+                panel.style.backgroundRepeat = 'no-repeat';
+              } else {
+                sources.forEach((s) => panel.appendChild(createMedia(s)));
+              }
+              track.appendChild(panel);
+            });
           }
 
           projOverlay.scrollTop = 0;
