@@ -8,6 +8,7 @@ const projects = [
     summary: 'Rethinking how B2B content and community actually work together.',
     project: 'Workweek Media',
     desc: 'Leading design for a media company rethinking how B2B content and community actually work together. Systems, strategy, the whole thing.',
+    tools: ['Claude', 'Cursor', 'Figma', 'Storybook', 'Obsidian'],
     images: [] as string[],
   },
   {
@@ -16,11 +17,12 @@ const projects = [
     summary: 'A browser-based AAA game engine that was adopted by 3 studios in 12 months.',
     project: 'Chaotic Game Engine',
     desc: 'Game engines are bloated, expensive, and inaccessible to much of the world. I designed a browser-based engine editor from zero – interface architecture, visual editing and debugging, real-time spatial collaboration, instant deploy to browser, and more. All prioritized by real studio user feedback. Users shipped playable builds 25% faster, at AAA fidelity, to be shared and experienced by anyone with a URL link. It grew Chaotic from 0 to 3 studio partners in 12 months.',
+    tools: ['Figma', 'Gaea', 'Chaotic Engine', 'UE5'],
     images: [
-      '/images/projects/chaotic/hero.png',
-      '/images/projects/chaotic/content-drawer.png',
-      '/images/projects/chaotic/comments.png',
-      '/images/projects/chaotic/vfx.png',
+      '/images/projects/chaotic/editor.png',
+      '/images/projects/chaotic/modules.png',
+      '/images/projects/chaotic/animation.png',
+      '/images/projects/chaotic/collaboration.png',
     ],
   },
   {
@@ -29,6 +31,7 @@ const projects = [
     summary: 'A cash offer app that helped grow revenue to $38M and led to acquisition.',
     project: 'Ribbon Cash',
     desc: 'Making cash offers on homes was slow, manual, and painful for everyone involved. I designed the Ribbon Cash mobile app end-to-end – modular offer flows, document automation with upload and e-signature, interactive offer summaries, and a unified design system spanning web and mobile. All shaped by research across three audiences: buyers, agents, and loan officers. Revenue grew 7x to $38M in 12 months, leading to an acquisition by EasyKnock.',
+    tools: ['Figma', 'Miro', 'Storybook'],
     images: [
       '/images/projects/ribbon/hero.png',
       '/images/projects/ribbon/devices.png',
@@ -176,10 +179,16 @@ const playing = [
       <p class="section-tag reveal">Building</p>
       <div class="project-grid stagger">
         {projects.map((p) => (
-          <div class="project-card" data-project={p.project} data-role={p.role} data-desc={p.desc} data-images={JSON.stringify(p.images)}>
-            <span class="mono-sm">{p.role}</span>
-            <h2>{p.company}</h2>
-            <p>{p.summary}</p>
+          <div class="project-card" data-project={p.project} data-role={p.role} data-desc={p.desc} data-tools={JSON.stringify(p.tools)} data-images={JSON.stringify(p.images)}>
+            <div class="project-card-left">
+              <span class="project-card-title">{p.company}</span>
+              <span class="project-card-role mono-sm">{p.role}</span>
+              <span class="project-card-summary">{p.summary}</span>
+            </div>
+            <div class="project-card-action">
+              <span class="project-card-open">OPEN</span>
+              <span class="project-card-arrow">→</span>
+            </div>
           </div>
         ))}
       </div>
@@ -194,7 +203,7 @@ const playing = [
           <h3>{writing[0].title}</h3>
           <p>{writing[0].desc}</p>
         </div>
-        <span class="link-frame writing-cta" id="open-writing-log">
+        <span class="link-frame writing-cta magnetic" id="open-writing-log">
           {writing.length} entries logged
         </span>
       </div>
@@ -230,7 +239,6 @@ const playing = [
               <span class="game-slot-title">{g.title}</span>
               <div class="game-slot-meta">
                 <span>{g.platform}</span>
-                <span>·</span>
                 <span class="game-slot-status">{g.status}</span>
               </div>
             </div>
@@ -249,18 +257,16 @@ const playing = [
     <section id="newsletter" class="newsletter-section">
       <div class="reveal">
         <p class="section-tag">Newsletter</p>
-        <h2 class="news-hed">Thinking out loud</h2>
-        <p class="news-desc">
-          Occasional writing on design, games, systems, and whatever I'm
-          chewing on. No spam. Unsubscribe whenever.
-        </p>
-        <form class="news-form" action="#" method="post">
-          <div class="news-row">
-            <input type="email" name="email" placeholder="your@email.com" aria-label="Email address" required />
-            <button type="submit">Subscribe</button>
-          </div>
-          <p class="mono-xs">Beehiiv integration coming soon.</p>
+        <h2 class="coin-title">Drop a coin</h2>
+        <p class="coin-desc">Occasional writing on design, games, systems, and whatever I'm chewing on. No spam, unsubscribe whenever.</p>
+        <form class="coin-form" id="coin-form" action="#" method="post">
+          <input type="email" name="email" id="coin-email" placeholder="your@email.com" aria-label="Email address" required autocomplete="email" />
+          <button type="submit" class="coin-btn" id="coin-btn">
+            <span class="coin-disc" aria-hidden="true"><span class="coin-disc-face">★</span></span>
+            <span class="coin-btn-label">Subscribe</span>
+          </button>
         </form>
+        <p class="coin-status mono-xs" id="coin-status">One email. Good things follow.</p>
       </div>
     </section>
 
@@ -329,6 +335,7 @@ const playing = [
   .writing-block {
     padding: 2rem;
     border: 1px solid var(--border);
+    border-radius: 4px;
     margin-bottom: 1.5rem;
   }
 
@@ -385,57 +392,6 @@ const playing = [
     padding-top: 6rem;
     padding-bottom: 6rem;
   }
-
-  .news-hed { margin-bottom: 0.75rem; }
-  .news-desc { margin-bottom: 1.5rem; max-width: 44ch; }
-
-  .news-form { max-width: 400px; }
-
-  .news-row {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .news-row input {
-    flex: 1;
-    padding: 0.6rem 0.85rem;
-    background: var(--bg-raised);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 0.85rem;
-    transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
-  }
-
-  .news-row input::placeholder { color: var(--text-dim); }
-
-  .news-row input:focus {
-    outline: none;
-    border-color: var(--green);
-    box-shadow: 0 0 0 2px var(--green-glow);
-  }
-
-  .news-row button {
-    padding: 0.6rem 1.2rem;
-    background: var(--green);
-    color: var(--bg);
-    border: none;
-    border-radius: 4px;
-    font-family: var(--mono);
-    font-size: 0.7rem;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: box-shadow 200ms var(--ease), transform 150ms ease;
-  }
-
-  .news-row button:hover {
-    box-shadow: 0 0 24px var(--green-glow);
-    transform: translateY(-1px);
-  }
-
-  .news-row button:active { transform: translateY(0); }
 
   /* ===== Footer ===== */
   .footer {

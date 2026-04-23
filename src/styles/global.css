@@ -7,9 +7,9 @@
 @import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap');
 
 :root {
-  --bg: #111110;
-  --bg-raised: #1a1918;
-  --bg-hover: #222120;
+  --bg: #1a1713;
+  --bg-raised: #24201a;
+  --bg-hover: #2d2821;
   --text: #ece8e1;
   --text-mid: #a09a90;
   --text-dim: #5a5650;
@@ -78,8 +78,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  gap: 1rem;
+  padding: var(--pad);
   transition: opacity 600ms ease, visibility 600ms ease;
 }
 
@@ -88,21 +87,86 @@ body {
   visibility: hidden;
 }
 
-.boot-text {
+.boot-panel {
+  width: min(420px, 90vw);
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--green);
-  text-shadow: 0 0 10px var(--green-glow);
-  opacity: 0;
-  animation: bootFade 400ms ease forwards;
 }
 
-.boot-text:nth-child(2) { animation-delay: 300ms; }
-.boot-text:nth-child(3) { animation-delay: 700ms; }
+.boot-header {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.boot-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-height: 9rem;
+  margin-bottom: 1rem;
+}
+
+.boot-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  opacity: 0;
+  animation: bootFade 260ms ease forwards;
+  text-shadow: 0 0 10px var(--green-glow);
+}
+
+.boot-tag {
+  color: var(--green);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  padding: 1px 6px;
+  border: 1px solid var(--green);
+  border-radius: 2px;
+  box-shadow: 0 0 10px var(--green-dim);
+}
+
+.boot-bar {
+  height: 2px;
+  background: var(--border);
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.boot-bar-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green-glow);
+  animation: bootProgress 1700ms var(--ease) forwards;
+  transform-origin: left;
+}
 
 @keyframes bootFade {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes bootProgress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* --- Ambient glow --- */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255, 200, 140, 0.06), transparent 70%),
+    radial-gradient(ellipse 60% 80% at 100% 120%, rgba(74, 222, 128, 0.035), transparent 70%);
 }
 
 /* --- Grain --- */
@@ -246,75 +310,117 @@ a:hover { color: var(--green); }
   opacity: 1;
 }
 
-/* --- Project grid --- */
+/* --- Project inventory --- */
 .project-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 0.8rem;
 }
 
 .project-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 2.5rem;
+  align-items: center;
+  padding: 2.25rem 2rem;
+  min-height: 10rem;
+  border-bottom: 1px solid var(--border);
+  transition: background 400ms ease;
+  cursor: pointer;
+}
+
+.project-card:last-child { border-bottom: none; }
+.project-card:hover { background: var(--bg-raised); }
+
+.project-card-left {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 2rem;
-  border: 1px solid var(--border);
-  cursor: pointer;
-  position: relative;
-  transition: border-color 500ms var(--ease);
+  gap: 0.9rem;
+  min-width: 0;
 }
 
-.project-card::before,
-.project-card::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  transition: width 400ms var(--ease), height 400ms var(--ease), opacity 300ms var(--ease);
+.project-card-role {
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: -0.78rem;
+  margin-bottom: 0.35rem;
+  transition: color 300ms ease;
 }
 
-.project-card::before {
-  top: -4px;
-  left: -4px;
-  border-top: 1.5px solid var(--green);
-  border-left: 1.5px solid var(--green);
+.project-card:hover .project-card-role {
+  color: var(--text-mid);
 }
 
-.project-card::after {
-  bottom: -4px;
-  right: -4px;
-  border-bottom: 1.5px solid var(--green);
-  border-right: 1.5px solid var(--green);
+.project-card-title {
+  font-family: var(--display);
+  font-size: clamp(2.2rem, 5.2vw, 4rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--text);
+  transition: color 400ms ease, text-shadow 400ms ease, transform 500ms var(--ease);
 }
 
-.project-card:hover {
-  border-color: var(--border-hover);
+.project-card-summary {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-mid);
+  max-width: 72ch;
+  text-wrap: pretty;
 }
 
-.project-card:hover::before,
-.project-card:hover::after {
-  width: 16px;
-  height: 16px;
-  opacity: 1;
+.project-card-action {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--mono);
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  transition: color 300ms ease;
 }
 
-.project-card h2 {
-  transition: color 400ms ease, letter-spacing 500ms var(--ease);
+.project-card-arrow {
+  font-size: 1.1rem;
+  transform: translateX(0);
+  transition: transform 300ms var(--ease);
 }
 
-.project-card:hover h2 {
+.project-card:hover .project-card-index {
   color: var(--green);
-  letter-spacing: -0.02em;
+  text-shadow: 0 0 12px var(--green-glow);
 }
 
-.project-card p {
-  font-size: 1rem;
-  line-height: 1.6;
+.project-card:hover .project-card-title {
+  color: var(--green);
+  text-shadow: 0 0 18px var(--green-glow);
+  transform: translateX(4px);
 }
 
-@media (max-width: 600px) {
-  .project-grid { grid-template-columns: 1fr; }
+.project-card:hover .project-card-action {
+  color: var(--green);
+}
+
+.project-card:hover .project-card-arrow {
+  transform: translateX(6px);
+}
+
+@media (max-width: 700px) {
+  .project-card {
+    grid-template-columns: 1fr;
+    row-gap: 1rem;
+    padding: 1.75rem 1.25rem;
+    min-height: 0;
+  }
+  .project-card-action {
+    justify-self: start;
+  }
 }
 
 /* --- Split sections --- */
@@ -538,6 +644,25 @@ a:hover { color: var(--green); }
 .dialogue-hint {
   opacity: 0.4;
   transition: opacity 300ms ease;
+}
+
+.overlay-tools {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.overlay-tools:empty { display: none; }
+
+.overlay-tools-sep {
+  color: var(--border-hover);
 }
 
 /* --- Filmstrip overlay --- */
@@ -782,6 +907,250 @@ a:hover { color: var(--green); }
   text-shadow: 0 0 8px var(--green-glow);
 }
 
+
+/* --- Coin newsletter + bonus round --- */
+.coin-title {
+  font-family: var(--display);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  line-height: 1;
+  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+
+.coin-desc {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-mid);
+  margin-bottom: 1.25rem;
+  max-width: 52ch;
+}
+
+.coin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 420px;
+}
+
+#coin-email {
+  padding: 0.8rem 1rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
+}
+#coin-email::placeholder { color: var(--text-dim); }
+#coin-email:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px var(--green-glow);
+}
+
+.coin-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--bg-raised);
+  color: var(--text-mid);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--display);
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 250ms var(--ease), border-color 250ms var(--ease), background 250ms var(--ease), box-shadow 250ms var(--ease), transform 120ms ease;
+}
+.coin-btn:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+  box-shadow: 0 0 24px var(--green-dim);
+  transform: translateY(-1px);
+}
+.coin-btn:active { transform: translateY(0); }
+.coin-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+
+.coin-status {
+  margin-top: 0.9rem;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  transition: color 300ms ease, text-shadow 300ms ease;
+}
+.coin-status.success {
+  color: var(--green);
+  text-shadow: 0 0 10px var(--green-glow);
+}
+
+/* The coin disc (shared) */
+.coin-disc {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #f3d08b 0%, #d4a44a 45%, #8a661e 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+    inset 0 -4px 6px rgba(0, 0, 0, 0.4),
+    0 0 12px rgba(212, 164, 74, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(80, 50, 10, 0.7);
+  font-size: 11px;
+  line-height: 1;
+  transform-origin: center;
+  transition: transform 200ms var(--ease);
+}
+.coin-disc-face { font-family: var(--mono); }
+.coin-btn:hover .coin-disc { transform: rotate(-8deg) scale(1.05); }
+
+.coin-disc.large {
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 -8px 12px rgba(0, 0, 0, 0.5),
+    0 0 22px rgba(212, 164, 74, 0.45);
+}
+
+/* Bonus round overlay */
+.coin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50000;
+  background: var(--bg);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 500ms var(--ease), visibility 500ms var(--ease);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--pad);
+}
+
+.coin-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.coin-overlay-inner {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.coin-overlay .section-tag { margin-bottom: 0.5rem; }
+
+.coin-overlay #coin-overlay-close {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 50001;
+}
+
+.coin-game-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.coin-state { transition: opacity 400ms var(--ease); }
+.coin-state.hidden { display: none; }
+
+.coin-attempts {
+  color: var(--text-dim);
+  letter-spacing: 0.16em;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-size: 0.7rem;
+}
+
+/* Play area */
+.coin-play {
+  position: relative;
+  width: 100%;
+  height: clamp(340px, 58vh, 560px);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 1rem 0 0.75rem;
+  overflow: hidden;
+  background-image:
+    radial-gradient(ellipse 60% 80% at 0% 100%, rgba(74, 222, 128, 0.05), transparent 70%),
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(255, 200, 140, 0.05), transparent 70%);
+}
+
+.coin-play-slot {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  pointer-events: none;
+}
+
+.coin-slot-label {
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+}
+
+.coin-slot-mouth.wide {
+  width: 110px;
+  height: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border-hover);
+  border-radius: 3px;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.75);
+  transition: box-shadow 300ms var(--ease), border-color 300ms var(--ease);
+}
+
+.coin-play-slot.catch .coin-slot-mouth.wide {
+  border-color: var(--green);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.75), 0 0 24px var(--green-glow);
+}
+
+.coin-trajectory {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.coin-trajectory circle {
+  fill: var(--green);
+  opacity: 0.5;
+}
+
+.coin-playable {
+  position: absolute;
+  left: 10%;
+  bottom: 12%;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  will-change: transform;
+  z-index: 2;
+}
+.coin-playable.grabbing { cursor: grabbing; }
+.coin-playable.flying { cursor: default; pointer-events: none; }
 
 /* --- Focus --- */
 :focus-visible {

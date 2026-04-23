@@ -23,9 +23,11 @@ const {
 
     <!-- Boot sequence -->
     <div class="boot-screen" id="boot">
-      <span class="boot-text">booting up...</span>
-      <span class="boot-text">loading world</span>
-      <span class="boot-text">let's go</span>
+      <div class="boot-panel">
+        <div class="boot-header">SYS // BOOTING</div>
+        <div class="boot-log" id="boot-log"></div>
+        <div class="boot-bar"><span class="boot-bar-fill"></span></div>
+      </div>
     </div>
 
     <!-- Interactive layers -->
@@ -56,9 +58,9 @@ const {
         <!-- First panel: project text -->
         <div class="filmstrip-panel filmstrip-text">
           <div class="filmstrip-text-inner">
-            <span class="mono-sm" id="project-overlay-role"></span>
             <p class="dialogue-q" id="project-overlay-title"></p>
             <p class="dialogue-a done" id="project-overlay-desc"></p>
+            <div class="overlay-tools" id="project-overlay-tools" aria-label="Tools"></div>
             <span class="dialogue-hint mono-xs">scroll to explore ↓</span>
           </div>
         </div>
@@ -71,12 +73,66 @@ const {
       <button class="filmstrip-close" id="filmstrip-close" aria-label="Close">&times;</button>
     </div>
 
+    <!-- Coin bonus round overlay -->
+    <div class="coin-overlay" id="coin-overlay">
+      <button class="filmstrip-close" id="coin-overlay-close" aria-label="Close">&times;</button>
+      <div class="coin-overlay-inner">
+        <div class="coin-state" id="coin-game">
+          <div class="coin-game-head">
+            <div>
+              <p class="section-tag">Bonus Round</p>
+              <h2 class="coin-title">Land the coin</h2>
+            </div>
+            <span class="coin-attempts mono-sm" id="coin-attempts">3 shots</span>
+          </div>
+          <p class="coin-desc">You're subscribed. Drag the coin back and release to launch. Land it in the slot for a bonus.</p>
+          <div class="coin-play" id="coin-play">
+            <div class="coin-play-slot" id="coin-play-slot">
+              <span class="coin-slot-label mono-xs">SLOT</span>
+              <div class="coin-slot-mouth wide"></div>
+            </div>
+            <svg class="coin-trajectory" id="coin-trajectory" aria-hidden="true"></svg>
+            <div class="coin-playable" id="coin-playable">
+              <span class="coin-disc large" aria-hidden="true"><span class="coin-disc-face">★</span></span>
+            </div>
+          </div>
+          <p class="coin-status mono-xs" id="coin-game-status">Pull the coin back, release to fire.</p>
+        </div>
+        <div class="coin-state hidden" id="coin-win">
+          <p class="section-tag">Jackpot</p>
+          <h2 class="coin-title">Nice shot</h2>
+          <p class="coin-desc">A small reward is on its way — details coming soon.</p>
+          <p class="coin-status success mono-xs">✓ Subscription locked in · bonus claimed</p>
+        </div>
+      </div>
+    </div>
+
     <script>
       // ============================
       // Boot sequence
       // ============================
       const boot = document.getElementById('boot');
-      setTimeout(() => boot?.classList.add('done'), 1800);
+      const bootLog = document.getElementById('boot-log');
+      const bootLines: Array<[string, string]> = [
+        ['> boot.init()', ''],
+        ['> GET /identity.json', '200'],
+        ['> GET /projects/*', '200'],
+        ['> GET /writing/*', '200'],
+        ['> MOUNT /home/patrick', 'OK'],
+        ['> READY', ''],
+      ];
+      let bootT = 120;
+      bootLines.forEach(([line, tag], i) => {
+        setTimeout(() => {
+          if (!bootLog) return;
+          const el = document.createElement('div');
+          el.className = 'boot-line';
+          el.innerHTML = `<span>${line}</span>${tag ? `<span class="boot-tag">${tag}</span>` : ''}`;
+          bootLog.appendChild(el);
+        }, bootT);
+        bootT += i === 0 ? 180 : 240;
+      });
+      setTimeout(() => boot?.classList.add('done'), 1900);
 
       // ============================
       // Text scramble effect
@@ -155,6 +211,37 @@ const {
         el.addEventListener('mouseenter', () => cursor?.classList.add('hovering'));
         el.addEventListener('mouseleave', () => cursor?.classList.remove('hovering'));
       });
+
+      // ============================
+      // Magnetic nav links
+      // ============================
+      const magneticEls = document.querySelectorAll<HTMLElement>('.hero-nav a, .magnetic');
+      const MAG_RADIUS = 90;
+      const MAG_STRENGTH = 0.4;
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const touch = window.matchMedia('(hover: none)').matches;
+
+      if (!reduceMotion && !touch) {
+        magneticEls.forEach((el) => {
+          el.style.transition = 'transform 260ms cubic-bezier(0.16, 1, 0.3, 1)';
+        });
+        document.addEventListener('mousemove', (e) => {
+          magneticEls.forEach((el) => {
+            const r = el.getBoundingClientRect();
+            const cxEl = r.left + r.width / 2;
+            const cyEl = r.top + r.height / 2;
+            const dx = e.clientX - cxEl;
+            const dy = e.clientY - cyEl;
+            const dist = Math.hypot(dx, dy);
+            if (dist < MAG_RADIUS) {
+              const f = 1 - dist / MAG_RADIUS;
+              el.style.transform = `translate(${dx * MAG_STRENGTH * f}px, ${dy * MAG_STRENGTH * f}px)`;
+            } else if (el.style.transform) {
+              el.style.transform = '';
+            }
+          });
+        });
+      }
 
       // ============================
       // Particle field
@@ -512,8 +599,8 @@ const {
       // ============================
       const projOverlay = document.getElementById('project-overlay');
       const projTitle = document.getElementById('project-overlay-title');
-      const projRole = document.getElementById('project-overlay-role');
       const projDesc = document.getElementById('project-overlay-desc');
+      const projTools = document.getElementById('project-overlay-tools');
       let projOpen = false;
 
       const filmstripClose = document.getElementById('filmstrip-close');
@@ -521,10 +608,17 @@ const {
       document.querySelectorAll('.project-card').forEach((card) => {
         card.addEventListener('click', () => {
           const el = card as HTMLElement;
-          if (!projOverlay || !projTitle || !projRole || !projDesc) return;
-          projRole.textContent = '';
+          if (!projOverlay || !projTitle || !projDesc) return;
           projDesc.textContent = el.dataset.desc || '';
           projTitle.textContent = el.dataset.project || '';
+
+          // Populate tools list
+          if (projTools) {
+            const tools: string[] = JSON.parse(el.dataset.tools || '[]');
+            projTools.innerHTML = tools.length
+              ? tools.map((t) => `<span>${t}</span>`).join('<span class="overlay-tools-sep">·</span>')
+              : '';
+          }
 
           // Populate filmstrip image panels
           const images: string[] = JSON.parse(el.dataset.images || '[]');
@@ -666,6 +760,236 @@ const {
       const ks = document.createElement('style');
       ks.textContent = `@keyframes toastKonami{0%{opacity:0;transform:translate(-50%,-50%) scale(0.9)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.03)}}`;
       document.head.appendChild(ks);
+
+      // ============================
+      // Coin subscribe (newsletter) — game flow
+      // ============================
+      const coinForm = document.getElementById('coin-form') as HTMLFormElement | null;
+      const coinEmail = document.getElementById('coin-email') as HTMLInputElement | null;
+      const coinStatus = document.getElementById('coin-status');
+      const coinIntro = document.getElementById('coin-intro');
+      const coinGame = document.getElementById('coin-game');
+      const coinWin = document.getElementById('coin-win');
+      const coinPlay = document.getElementById('coin-play');
+      const coinPlayable = document.getElementById('coin-playable');
+      const coinPlaySlot = document.getElementById('coin-play-slot');
+      const coinTraj = document.getElementById('coin-trajectory') as unknown as SVGSVGElement | null;
+      const coinAttemptsEl = document.getElementById('coin-attempts');
+      const coinGameStatus = document.getElementById('coin-game-status');
+
+      const coinOverlay = document.getElementById('coin-overlay');
+      const coinOverlayClose = document.getElementById('coin-overlay-close');
+      let coinGameInited = false;
+
+      function openCoinOverlay() {
+        if (!coinOverlay) return;
+        coinOverlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        if (!coinGameInited) {
+          setTimeout(() => {
+            initCoinGame();
+            coinGameInited = true;
+          }, 80);
+        }
+      }
+
+      function closeCoinOverlay() {
+        if (!coinOverlay) return;
+        coinOverlay.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+
+      coinForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!coinEmail || !coinStatus) return;
+        if (!coinEmail.checkValidity()) {
+          coinStatus.textContent = 'That looks off — use a real email.';
+          coinStatus.classList.remove('success');
+          return;
+        }
+        coinStatus.textContent = `Subscribed. ${coinEmail.value} is in.`;
+        coinStatus.classList.add('success');
+        openCoinOverlay();
+      });
+
+      coinOverlayClose?.addEventListener('click', closeCoinOverlay);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && coinOverlay?.classList.contains('open')) closeCoinOverlay();
+      });
+
+      // Coin launcher physics
+      function initCoinGame() {
+        if (!coinPlay || !coinPlayable || !coinPlaySlot || !coinTraj || !coinAttemptsEl || !coinGameStatus) return;
+
+        const GRAVITY = 0.42;
+        const POWER = 0.28;
+        const MAX_PULL = 110;
+        const WIN_FLOAT_MS = 260; // slot catch window flash
+        let attempts = 3;
+        let animId = 0;
+        let dragging = false;
+        let flying = false;
+        let gameOver = false;
+        let sx = 0, sy = 0; // drag start
+        let dx = 0, dy = 0; // drag delta (pull)
+        let px = 0, py = 0; // coin position (relative to play area)
+        let vx = 0, vy = 0;
+
+        const playRect = () => coinPlay.getBoundingClientRect();
+        const slotMouth = coinPlaySlot.querySelector('.coin-slot-mouth') as HTMLElement;
+
+        function resetCoin() {
+          if (!coinPlayable || !coinPlay) return;
+          dragging = false;
+          flying = false;
+          dx = 0; dy = 0; vx = 0; vy = 0;
+          coinPlayable.style.transform = '';
+          coinPlayable.classList.remove('flying');
+          drawTrajectory(0, 0);
+        }
+
+        function updateAttempts() {
+          if (!coinAttemptsEl) return;
+          coinAttemptsEl.textContent = `${attempts} shot${attempts === 1 ? '' : 's'}`;
+        }
+
+        function drawTrajectory(pdx: number, pdy: number) {
+          if (!coinTraj || !coinPlayable) return;
+          while (coinTraj.firstChild) coinTraj.removeChild(coinTraj.firstChild);
+          if (!pdx && !pdy) return;
+          const rect = playRect();
+          const coinRect = coinPlayable.getBoundingClientRect();
+          const originX = (coinRect.left + coinRect.width / 2) - rect.left;
+          const originY = (coinRect.top + coinRect.height / 2) - rect.top;
+          const svgNS = 'http://www.w3.org/2000/svg';
+          let tvx = -pdx * POWER;
+          let tvy = -pdy * POWER;
+          let tx = originX, ty = originY;
+          let prevX = tx, prevY = ty;
+          for (let step = 0; step < 30; step++) {
+            tvy += GRAVITY;
+            tx += tvx;
+            ty += tvy;
+            if (tx < -10 || tx > rect.width + 10 || ty > rect.height + 20) break;
+            const dot = document.createElementNS(svgNS, 'circle');
+            dot.setAttribute('cx', `${tx}`);
+            dot.setAttribute('cy', `${ty}`);
+            dot.setAttribute('r', '1.6');
+            dot.setAttribute('opacity', `${Math.max(0, 1 - step / 30)}`);
+            coinTraj.appendChild(dot);
+            prevX = tx; prevY = ty;
+          }
+        }
+
+        function hitSlot(): boolean {
+          if (!coinPlayable || !coinPlay) return false;
+          const coinRect = coinPlayable.getBoundingClientRect();
+          const mouth = slotMouth.getBoundingClientRect();
+          const cx = coinRect.left + coinRect.width / 2;
+          const cy = coinRect.top + coinRect.height / 2;
+          // Catch zone: slot mouth expanded vertically
+          return cx >= mouth.left && cx <= mouth.right && cy >= mouth.top - 18 && cy <= mouth.bottom + 10;
+        }
+
+        function startFlight() {
+          if (!coinPlayable || !coinPlay) return;
+          flying = true;
+          vx = -dx * POWER;
+          vy = -dy * POWER;
+          // Capture starting offset so transforms remain relative
+          px = 0; py = 0;
+          drawTrajectory(0, 0);
+          coinPlayable.classList.add('flying');
+          animId = requestAnimationFrame(tick);
+        }
+
+        function tick() {
+          if (!coinPlayable || !coinPlay) return;
+          vy += GRAVITY;
+          px += vx;
+          py += vy;
+          coinPlayable.style.transform = `translate(${px}px, ${py}px) rotate(${px * 6}deg)`;
+
+          if (hitSlot()) {
+            cancelAnimationFrame(animId);
+            coinPlaySlot.classList.add('catch');
+            setTimeout(() => coinPlaySlot.classList.remove('catch'), WIN_FLOAT_MS);
+            setTimeout(() => onWin(), 280);
+            return;
+          }
+
+          const rect = playRect();
+          const coinRect = coinPlayable.getBoundingClientRect();
+          const relX = (coinRect.left + coinRect.width / 2) - rect.left;
+          const relY = (coinRect.top + coinRect.height / 2) - rect.top;
+          if (relX < -40 || relX > rect.width + 40 || relY > rect.height + 40) {
+            cancelAnimationFrame(animId);
+            attempts--;
+            updateAttempts();
+            if (attempts <= 0) {
+              gameOver = true;
+              if (coinGameStatus) {
+                coinGameStatus.textContent = 'Out of coins. You\'re still subscribed — that\'s the real prize.';
+                coinGameStatus.classList.add('success');
+              }
+              return;
+            }
+            if (coinGameStatus) coinGameStatus.textContent = 'Missed. Try again.';
+            resetCoin();
+            return;
+          }
+          animId = requestAnimationFrame(tick);
+        }
+
+        function onWin() {
+          if (!coinGame || !coinWin) return;
+          coinGame.classList.add('hidden');
+          coinWin.classList.remove('hidden');
+        }
+
+        function pointerDown(e: PointerEvent) {
+          if (flying || gameOver) return;
+          dragging = true;
+          coinPlayable!.classList.add('grabbing');
+          sx = e.clientX; sy = e.clientY;
+          dx = 0; dy = 0;
+          coinPlayable!.setPointerCapture(e.pointerId);
+        }
+        function pointerMove(e: PointerEvent) {
+          if (!dragging) return;
+          let ddx = e.clientX - sx;
+          let ddy = e.clientY - sy;
+          const mag = Math.hypot(ddx, ddy);
+          if (mag > MAX_PULL) {
+            const k = MAX_PULL / mag;
+            ddx *= k; ddy *= k;
+          }
+          dx = ddx; dy = ddy;
+          coinPlayable!.style.transform = `translate(${dx}px, ${dy}px)`;
+          drawTrajectory(dx, dy);
+        }
+        function pointerUp() {
+          if (!dragging) return;
+          dragging = false;
+          coinPlayable!.classList.remove('grabbing');
+          if (Math.hypot(dx, dy) < 8) {
+            // Too small a pull — cancel, reset
+            resetCoin();
+            return;
+          }
+          if (coinGameStatus && !coinGameStatus.classList.contains('success')) {
+            coinGameStatus.textContent = '...';
+          }
+          startFlight();
+        }
+
+        coinPlayable.addEventListener('pointerdown', pointerDown);
+        coinPlayable.addEventListener('pointermove', pointerMove);
+        coinPlayable.addEventListener('pointerup', pointerUp);
+        coinPlayable.addEventListener('pointercancel', pointerUp);
+
+        updateAttempts();
+      }
     </script>
   </body>
 </html>
