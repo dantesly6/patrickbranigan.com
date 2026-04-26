@@ -240,11 +240,31 @@ const libraryTotals = library.platforms.reduce(
     <section id="writing">
       <p class="section-tag reveal">Thinking</p>
       <div class="stagger">
-        <div class="writing-block">
-          <span class="mono-sm">{writing[0].date}</span>
-          <h3>{writing[0].title}</h3>
-          <p>{writing[0].desc}</p>
-        </div>
+        {(() => {
+          const featured = writing[0];
+          const words = featured.desc.split(/\s+/);
+          const isLong = words.length > 400;
+          const preview = isLong ? words.slice(0, 400).join(' ') + '…' : featured.desc;
+          return (
+            <div class="writing-block">
+              <span class="mono-sm">{featured.date}</span>
+              <h3>{featured.title}</h3>
+              <p>{preview}</p>
+              {isLong && (
+                <button
+                  type="button"
+                  class="writing-readmore mono-sm"
+                  id="writing-readmore"
+                  data-writing-date={featured.date}
+                  data-writing-title={featured.title}
+                  data-writing-desc={featured.desc}
+                >
+                  Read more →
+                </button>
+              )}
+            </div>
+          );
+        })()}
         <span class="link-frame writing-cta magnetic" id="open-writing-log">
           {writing.length} entries logged
         </span>
@@ -324,24 +344,36 @@ const libraryTotals = library.platforms.reduce(
 
     <!-- ===== Newsletter ===== -->
     <section id="newsletter" class="newsletter-section">
-      <div class="reveal">
-        <p class="section-tag">Newsletter</p>
-        <h2 class="news-title">Stay in the loop</h2>
+      <div class="news-stage stagger reveal">
+        <h2 class="news-title">Pressing <span class="news-title-accent">Pause</span></h2>
         <p class="news-desc">Occasional writing on design, games, systems, and whatever I'm chewing on. No spam, unsubscribe whenever.</p>
         <form class="news-form" id="news-form" action="#" method="post">
-          <input type="email" name="email" id="news-email" placeholder="your@email.com" aria-label="Email address" required autocomplete="email" />
-          <button type="submit" class="news-btn" id="news-btn">Subscribe</button>
+          <div class="news-field">
+            <input type="email" name="email" id="news-email" placeholder="your@email.com" aria-label="Email address" required autocomplete="email" />
+            <span class="news-field-rule" aria-hidden="true"></span>
+          </div>
+          <button type="submit" class="news-btn magnetic" id="news-btn">
+            <span class="news-btn-label">Subscribe</span>
+            <span class="news-btn-arrow" aria-hidden="true">→</span>
+          </button>
         </form>
-        <p class="news-status" id="news-status">One email. No spam.</p>
+        <p class="news-status" id="news-status"></p>
+        <div class="news-meta mono-xs" aria-hidden="true">
+          <span class="news-stat"><em>5 min</em> reads</span>
+          <span class="news-divider">·</span>
+          <span class="news-stat"><em>0%</em> bullshit</span>
+          <span class="news-divider">·</span>
+          <span class="news-stat"><em>~2×</em> per month</span>
+        </div>
       </div>
     </section>
 
     <!-- ===== Footer ===== -->
     <footer class="footer reveal">
       <div class="footer-links">
-        <a href="https://twitter.com/" class="link-frame" target="_blank" rel="noopener">Twitter</a>
-        <a href="https://linkedin.com/" class="link-frame" target="_blank" rel="noopener">LinkedIn</a>
-        <a href="mailto:hello@patrickbranigan.com" class="link-frame">Email</a>
+        <a href="https://twitter.com/" class="link-frame magnetic" target="_blank" rel="noopener">Twitter</a>
+        <a href="https://linkedin.com/" class="link-frame magnetic" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="mailto:hello@patrickbranigan.com" class="link-frame magnetic">Email</a>
       </div>
       <p class="mono-xs">&copy; {new Date().getFullYear()} · Built with care, curiosity, and too much coffee.</p>
     </footer>
@@ -399,9 +431,6 @@ const libraryTotals = library.platforms.reduce(
 
   /* ===== Writing — journal log ===== */
   .writing-block {
-    padding: 2rem;
-    border: 1px solid var(--border);
-    border-radius: 4px;
     margin-bottom: 1.5rem;
   }
 
@@ -414,6 +443,21 @@ const libraryTotals = library.platforms.reduce(
   }
 
   .writing-block h3 { margin-bottom: 0.5rem; }
+
+  .writing-readmore {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green-glow);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: opacity 200ms var(--ease);
+  }
+
+  .writing-readmore:hover { opacity: 0.75; }
 
   .writing-cta {
     font-family: var(--mono);
@@ -455,9 +499,17 @@ const libraryTotals = library.platforms.reduce(
 
   /* ===== Newsletter ===== */
   .newsletter-section {
-    padding-top: 6rem;
-    padding-bottom: 6rem;
+    padding-top: 9rem;
+    padding-bottom: 14rem;
+    position: relative;
   }
+
+  .news-stage {
+    max-width: 56ch;
+    margin: 0 auto;
+    text-align: center;
+  }
+
 
   /* ===== Footer ===== */
   .footer {

@@ -341,6 +341,70 @@ const {
       document.querySelectorAll('.reveal, .stagger').forEach((el) => obs.observe(el));
 
       // ============================
+      // Section tags — scroll-driven drift, bounces back on rest
+      // ============================
+      if (!reduceMotion) {
+        const sectionTags = Array.from(document.querySelectorAll<HTMLElement>('.section-tag'));
+        if (sectionTags.length) {
+          let lastY = window.scrollY;
+          let restTimer: number | undefined;
+          const maxOffset = 14;
+          const sensitivity = 0.35;
+          const onScroll = () => {
+            const cur = window.scrollY;
+            const dy = cur - lastY;
+            lastY = cur;
+            const offset = Math.max(-maxOffset, Math.min(maxOffset, -dy * sensitivity));
+            sectionTags.forEach((el) => {
+              el.style.transition = 'transform 80ms linear';
+              el.style.transform = `translateY(${offset}px)`;
+            });
+            window.clearTimeout(restTimer);
+            restTimer = window.setTimeout(() => {
+              sectionTags.forEach((el) => {
+                el.style.transition = 'transform 700ms cubic-bezier(.34,1.56,.64,1)';
+                el.style.transform = 'translateY(0)';
+              });
+            }, 90);
+          };
+          window.addEventListener('scroll', onScroll, { passive: true });
+        }
+      }
+
+      // ============================
+      // Library dashboard — replay reveal each time it opens
+      // ============================
+      const libraryDash = document.querySelector<HTMLDetailsElement>('.library-dashboard');
+      if (libraryDash) {
+        const ease = 'cubic-bezier(.2,.7,.2,1)';
+        const playLibraryReveal = () => {
+          const rows = libraryDash.querySelectorAll<HTMLElement>('.library-row');
+          const fills = libraryDash.querySelectorAll<HTMLElement>('.library-fill');
+          rows.forEach((el, i) => {
+            el.getAnimations().forEach((a) => a.cancel());
+            el.animate(
+              [
+                { opacity: 0, transform: 'translateY(10px)' },
+                { opacity: 1, transform: 'translateY(0)' },
+              ],
+              { duration: 520, easing: ease, delay: 60 + i * 80, fill: 'forwards' },
+            );
+          });
+          fills.forEach((el, i) => {
+            el.getAnimations().forEach((a) => a.cancel());
+            el.animate(
+              [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }],
+              { duration: 700, easing: ease, delay: 280 + i * 80, fill: 'forwards' },
+            );
+          });
+        };
+        libraryDash.addEventListener('toggle', () => {
+          if (libraryDash.open) playLibraryReveal();
+        });
+        if (libraryDash.open) playLibraryReveal();
+      }
+
+      // ============================
       // Writing log overlay
       // ============================
       const writingOverlay = document.getElementById('writing-overlay');
@@ -412,6 +476,19 @@ const {
       });
 
       writingBack?.addEventListener('click', showWritingList);
+
+      document.getElementById('writing-readmore')?.addEventListener('click', (e) => {
+        const el = e.currentTarget as HTMLElement;
+        if (!writingOverlay || !writingDetailDate || !writingDetailTitle || !writingDetailDesc) return;
+        writingDetailDate.textContent = el.dataset.writingDate || '';
+        writingDetailTitle.textContent = el.dataset.writingTitle || '';
+        writingDetailDesc.textContent = el.dataset.writingDesc || '';
+        writingList?.classList.add('fade-out');
+        writingDetail?.classList.remove('fade-out');
+        writingOverlay.scrollTop = 0;
+        writingOverlay.classList.add('open');
+        writingOpen = true;
+      });
 
       // ============================
       // HUD dialogue system — gaming Q&A
@@ -636,12 +713,20 @@ const {
             });
           }
 
-          projOverlay.scrollTop = 0;
+          const jumpToTop = () => {
+            const prev = projOverlay.style.scrollBehavior;
+            projOverlay.style.scrollBehavior = 'auto';
+            projOverlay.scrollTop = 0;
+            projOverlay.style.scrollBehavior = prev;
+          };
+          jumpToTop();
 
           // Cinematic reveal: card scales out, then overlay opens with staggered children
           el.classList.add('fly-out');
           setTimeout(() => {
             projOverlay.classList.add('open');
+            jumpToTop();
+            requestAnimationFrame(jumpToTop);
             projOpen = true;
           }, 220);
           setTimeout(() => el.classList.remove('fly-out'), 700);
@@ -773,6 +858,22 @@ const {
       const newsEmail = document.getElementById('news-email') as HTMLInputElement | null;
       const newsStatus = document.getElementById('news-status');
       const newsBtn = document.getElementById('news-btn') as HTMLButtonElement | null;
+
+      if (newsEmail) {
+        const placeholders = [
+          'your@email.com',
+          'curious@reader.io',
+          'monday@inbox.com',
+          'patrick@workweek.com',
+        ];
+        let pIdx = 0;
+        const cyclePlaceholder = () => {
+          if (document.activeElement === newsEmail || newsEmail.value) return;
+          pIdx = (pIdx + 1) % placeholders.length;
+          newsEmail.placeholder = placeholders[pIdx];
+        };
+        setInterval(cyclePlaceholder, 2600);
+      }
 
       newsForm?.addEventListener('submit', (e) => {
         e.preventDefault();

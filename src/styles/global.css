@@ -202,6 +202,11 @@ section { padding: 10rem 0; }
   letter-spacing: 0.14em;
   color: var(--green);
   margin-bottom: 2rem;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-tag { will-change: auto; }
 }
 
 .section-tag::before {
@@ -526,19 +531,10 @@ a:hover { color: var(--green); }
   border-bottom-color: var(--border);
 }
 
-/* Smooth reveal of the platform rows */
-.library-dashboard[open] .library-row {
+/* Reveal animations are driven by JS (Web Animations API) on toggle so they replay each open. */
+.library-dashboard .library-row {
   opacity: 0;
   transform: translateY(10px);
-  animation: libraryRowIn 520ms var(--ease) forwards;
-}
-.library-dashboard[open] .library-row:nth-child(1) { animation-delay: 60ms; }
-.library-dashboard[open] .library-row:nth-child(2) { animation-delay: 140ms; }
-.library-dashboard[open] .library-row:nth-child(3) { animation-delay: 220ms; }
-.library-dashboard[open] .library-row:nth-child(4) { animation-delay: 300ms; }
-
-@keyframes libraryRowIn {
-  to { opacity: 1; transform: translateY(0); }
 }
 
 
@@ -609,13 +605,7 @@ a:hover { color: var(--green); }
   transform: scaleX(0);
 }
 
-.library-dashboard[open] .library-fill {
-  animation: fillXp 700ms var(--ease) forwards;
-}
-.library-dashboard[open] .library-row:nth-child(1) .library-fill { animation-delay: 280ms; }
-.library-dashboard[open] .library-row:nth-child(2) .library-fill { animation-delay: 360ms; }
-.library-dashboard[open] .library-row:nth-child(3) .library-fill { animation-delay: 440ms; }
-.library-dashboard[open] .library-row:nth-child(4) .library-fill { animation-delay: 520ms; }
+/* Fill animation is driven by JS on toggle to replay each open. */
 
 .library-count {
   color: var(--text-dim);
@@ -1216,72 +1206,111 @@ a:hover { color: var(--green); }
 /* --- Newsletter subscribe --- */
 .news-title {
   font-family: var(--display);
-  font-size: clamp(2rem, 5vw, 3.2rem);
-  line-height: 1;
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  line-height: 0.95;
   text-transform: uppercase;
   font-weight: 400;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   color: var(--text);
-  margin-bottom: 0.4rem;
+  margin: 0.6rem 0 1.25rem;
+}
+
+.news-title-accent {
+  color: var(--green);
+  text-shadow: 0 0 24px var(--green-glow);
 }
 
 .news-desc {
-  font-size: 0.95rem;
-  line-height: 1.55;
+  font-size: 1.02rem;
+  line-height: 1.6;
   color: var(--text-mid);
-  margin-bottom: 1.25rem;
-  max-width: 52ch;
+  margin: 0 auto 2.25rem;
+  max-width: 46ch;
 }
 
 .news-form {
   display: flex;
-  gap: 0.5rem;
-  max-width: 440px;
+  align-items: stretch;
+  gap: 1rem;
+  max-width: 480px;
+  margin: 0 auto;
   flex-wrap: wrap;
 }
 
+.news-field {
+  position: relative;
+  flex: 1 1 16rem;
+  display: flex;
+  align-items: stretch;
+}
+
 #news-email {
-  flex: 1 1 14rem;
-  padding: 0.8rem 1rem;
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  flex: 1;
+  padding: 0.85rem 0.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   color: var(--text);
   font-family: var(--sans);
-  font-size: 0.95rem;
-  transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
+  font-size: 1rem;
+  text-align: center;
+  transition: border-color 200ms var(--ease);
 }
-#news-email::placeholder { color: var(--text-dim); }
-#news-email:focus {
-  outline: none;
-  border-color: var(--green);
-  box-shadow: 0 0 0 2px var(--green-glow);
+#news-email::placeholder {
+  color: var(--text-dim);
+  transition: color 200ms var(--ease);
 }
+#news-email:focus { outline: none; }
+#news-email:focus::placeholder { color: transparent; }
+
+.news-field-rule {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 1px;
+  background: var(--green);
+  box-shadow: 0 0 10px var(--green-glow);
+  transform: translateX(-50%);
+  transition: width 320ms var(--ease);
+  pointer-events: none;
+}
+.news-field:focus-within .news-field-rule { width: 100%; }
 
 .news-btn {
-  padding: 0.8rem 1.25rem;
-  background: var(--bg-raised);
-  color: var(--text-mid);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.4rem;
+  background: transparent;
+  color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 999px;
   font-family: var(--mono);
   font-size: 0.72rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: color 250ms var(--ease), border-color 250ms var(--ease), box-shadow 250ms var(--ease), transform 120ms ease;
+  transition: color 250ms var(--ease), border-color 250ms var(--ease), box-shadow 250ms var(--ease), background 250ms var(--ease);
+}
+.news-btn-arrow {
+  display: inline-block;
+  transition: transform 250ms var(--ease);
 }
 .news-btn:hover {
-  color: var(--green);
+  color: var(--bg);
+  background: var(--green);
   border-color: var(--green);
-  box-shadow: 0 0 18px var(--green-dim);
-  transform: translateY(-1px);
+  box-shadow: 0 0 22px var(--green-dim);
 }
-.news-btn:active { transform: translateY(0); }
+.news-btn:hover .news-btn-arrow { transform: translateX(4px); }
+.news-btn:active { transform: translateY(1px); }
 .news-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+.news-btn:disabled:hover { background: transparent; color: var(--text); border-color: var(--border); box-shadow: none; }
 
 .news-status {
-  margin-top: 0.9rem;
+  margin-top: 1rem;
   font-size: 0.75rem;
   color: var(--text-dim);
   letter-spacing: 0.06em;
@@ -1291,6 +1320,24 @@ a:hover { color: var(--green); }
   color: var(--green);
   text-shadow: 0 0 10px var(--green-glow);
 }
+
+.news-meta {
+  margin-top: 2.5rem;
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.news-stat em {
+  font-style: normal;
+  color: var(--text);
+  margin-right: 0.3rem;
+}
+.news-divider { color: var(--border); }
 
 /* --- Focus --- */
 :focus-visible {
