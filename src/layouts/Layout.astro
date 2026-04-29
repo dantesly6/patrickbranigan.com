@@ -69,6 +69,14 @@ const {
       <button class="filmstrip-close" id="filmstrip-close" aria-label="Close">&times;</button>
     </div>
 
+    <!-- Lightbox for tap-to-zoom on filmstrip images -->
+    <div class="lightbox" id="lightbox" aria-hidden="true">
+      <button class="lightbox-close" id="lightbox-close" aria-label="Close">&times;</button>
+      <div class="lightbox-content" id="lightbox-content">
+        <img id="lightbox-img" src="" alt="" />
+      </div>
+    </div>
+
     <script>
       // ============================
       // Boot sequence
@@ -227,7 +235,7 @@ const {
       }
 
       function initParticles() {
-        const count = Math.floor((W * H) / 18000);
+        const count = Math.floor((W * H) / 14500);
         particles = [];
         for (let i = 0; i < count; i++) {
           particles.push({
@@ -235,8 +243,8 @@ const {
             y: Math.random() * H,
             vx: (Math.random() - 0.5) * 0.15,
             vy: (Math.random() - 0.5) * 0.15,
-            r: Math.random() * 1.2 + 0.3,
-            a: Math.random() * 0.3 + 0.05,
+            r: Math.random() * 1.3 + 0.4,
+            a: Math.random() * 0.35 + 0.12,
           });
         }
       }
@@ -700,12 +708,6 @@ const {
                 card.className = 'light-card';
                 sources.forEach((s) => card.appendChild(createMedia(s)));
                 panel.appendChild(card);
-              } else if (sources.length === 1 && !/\.(mp4|webm|mov)$/i.test(sources[0])) {
-                // Single image: keep background-image for crispness
-                panel.style.backgroundImage = `url(${sources[0]})`;
-                panel.style.backgroundSize = 'contain';
-                panel.style.backgroundPosition = 'center';
-                panel.style.backgroundRepeat = 'no-repeat';
               } else {
                 sources.forEach((s) => panel.appendChild(createMedia(s)));
               }
@@ -736,64 +738,6 @@ const {
       function closeProject() {
         projOverlay?.classList.remove('open');
         projOpen = false;
-      }
-
-      // Drag-to-scroll on filmstrip (vertical)
-      if (projOverlay) {
-        let isDragging = false;
-        let dragStartY = 0;
-        let dragScrollStart = 0;
-        let hasDragged = false;
-        let lastY = 0;
-        let velocity = 0;
-
-        // Panel snap positions: first panel is shorter (100vh - 80px), rest are 100vh
-        function nearestPanel(scrollPos: number): number {
-          const vh = window.innerHeight;
-          const firstH = vh - 80;
-          if (scrollPos < firstH / 2) return 0;
-          const pastFirst = scrollPos - firstH;
-          const idx = Math.round(pastFirst / vh);
-          return firstH + Math.max(0, idx) * vh;
-        }
-
-        projOverlay.addEventListener('mousedown', (e: MouseEvent) => {
-          if ((e.target as HTMLElement).closest('.filmstrip-close')) return;
-          isDragging = true;
-          hasDragged = false;
-          dragStartY = e.pageY;
-          lastY = e.pageY;
-          velocity = 0;
-          dragScrollStart = projOverlay.scrollTop;
-          projOverlay.classList.add('grabbing');
-        });
-
-        window.addEventListener('mousemove', (e: MouseEvent) => {
-          if (!isDragging) return;
-          const dy = e.pageY - dragStartY;
-          velocity = lastY - e.pageY;
-          lastY = e.pageY;
-          if (Math.abs(dy) > 5) hasDragged = true;
-          projOverlay.scrollTop = dragScrollStart - dy;
-        });
-
-        window.addEventListener('mouseup', () => {
-          if (!isDragging) return;
-          isDragging = false;
-          projOverlay.classList.remove('grabbing');
-          // Smooth scroll to nearest panel, factoring in momentum
-          const projected = projOverlay.scrollTop + velocity * 8;
-          const target = nearestPanel(projected);
-          projOverlay.scrollTo({ top: target, behavior: 'smooth' });
-        });
-
-        // Prevent click-to-close when user was dragging
-        projOverlay.addEventListener('click', (e: MouseEvent) => {
-          if (hasDragged) {
-            e.stopPropagation();
-            hasDragged = false;
-          }
-        }, true);
       }
 
       filmstripClose?.addEventListener('click', (e) => {
@@ -887,6 +831,47 @@ const {
         newsStatus.classList.add('success');
         newsBtn.disabled = true;
         newsBtn.textContent = 'Subscribed';
+      });
+
+      // ============================
+      // Lightbox — tap-to-zoom on filmstrip images
+      // ============================
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img') as HTMLImageElement | null;
+      const lightboxClose = document.getElementById('lightbox-close');
+      const lightboxContent = document.getElementById('lightbox-content');
+
+      function openLightbox(src: string, alt: string) {
+        if (!lightbox || !lightboxImg) return;
+        lightboxImg.src = src;
+        lightboxImg.alt = alt;
+        lightbox.classList.add('open');
+        lightbox.setAttribute('aria-hidden', 'false');
+      }
+      function closeLightbox() {
+        lightbox?.classList.remove('open');
+        lightbox?.setAttribute('aria-hidden', 'true');
+        if (lightboxImg) lightboxImg.src = '';
+      }
+
+      projOverlay?.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'IMG' && target.closest('.filmstrip-img')) {
+          const img = target as HTMLImageElement;
+          openLightbox(img.src, img.alt || '');
+        }
+      });
+
+      lightboxClose?.addEventListener('click', closeLightbox);
+      lightboxContent?.addEventListener('click', (e) => {
+        if (e.target === lightboxContent || (e.target as HTMLElement).tagName === 'IMG') {
+          closeLightbox();
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && lightbox?.classList.contains('open')) {
+          closeLightbox();
+        }
       });
     </script>
   </body>

@@ -4,12 +4,17 @@ import Layout from '../layouts/Layout.astro';
 const projects = [
   {
     company: 'Workweek Media',
-    role: 'Founding Product Designer',
-    summary: 'Rethinking how B2B content and community actually work together.',
+    role: 'Founding Product Designer · Design Ops Lead',
+    summary: 'A design system, custom Figma tooling, and an internal operating system anyone in the org can build through.',
     project: 'Workweek Media',
-    desc: 'Leading design for a media company rethinking how B2B content and community actually work together. Systems, strategy, the whole thing.',
-    tools: ['Claude', 'Cursor', 'Figma', 'Storybook', 'Obsidian'],
-    images: [] as string[],
+    desc: "I'm currently leading design ops for Workweek – a B2B media company. I built and maintain Workweek's design system, as well as co-own and maintain our Builder Stack: an internal workflow leveraging tools and technologies that enable anyone in Workweek to start with an idea and end with a deployed, measurable realization of their idea in record time. Anyone can ship to enhance Workweek's platform – no clone, no commands, real user impact.",
+    tools: ['Claude Code', 'Figma', 'Storybook', 'Linear', 'Amplitude', 'BigQuery'],
+    images: [
+      '/images/projects/workweek/01-shape.png',
+      '/images/projects/workweek/02-strategy.png',
+      '/images/projects/workweek/03-lifecycle.png',
+      '/images/projects/workweek/04-real-run.png',
+    ] as Array<string | { src: string | string[]; frame?: 'light' }>,
   },
   {
     company: 'Chaotic Games',
@@ -180,9 +185,9 @@ function wavePath(amp: number): string {
 }
 
 const playing = [
-  { title: 'Battlefield 6', platform: 'PC', rating: 7, status: '' },
-  { title: 'Resident Evil Requiem', platform: 'Switch', rating: 8, status: '' },
-  { title: 'Pokemon Pokopia', platform: 'Switch', rating: 9, status: '' },
+  { title: 'Battlefield 6', platform: 'PC', rating: 8, status: '' },
+  { title: 'Resident Evil Requiem', platform: 'Switch', rating: 5, status: '' },
+  { title: 'Pokemon Pokopia', platform: 'Switch', rating: 2, status: '' },
 ].map(g => ({ ...g, ...ratingColor(g.rating) }));
 
 const library = {
@@ -295,27 +300,37 @@ const libraryTotals = library.platforms.reduce(
     <section id="playing">
       <p class="section-tag reveal">Playing</p>
       <div class="game-inventory stagger">
-        {playing.map((g) => (
-          <div class="game-slot">
-            <div class="game-slot-left">
-              <span class="game-slot-title">{g.title}</span>
-              <div class="game-slot-meta">
-                <span>{g.platform}</span>
-                <span class="game-slot-status">{g.status}</span>
+        {playing.map((g) => {
+          const tier = g.rating >= 7 ? 'good' : g.rating >= 4 ? 'okay' : 'bad';
+          return (
+            <div class="game-slot">
+              <div class={`game-score-hex tier-${tier}`} aria-label={`${g.rating} out of 10`} style={`--score-color: ${g.color}; --score-glow: ${g.glow}`}>
+                <svg viewBox="0 0 100 100" aria-hidden="true">
+                  {tier === 'good' && (
+                    <Fragment>
+                      <polygon class="hex-outline" points="50,6 88.1,28 88.1,72 50,94 11.9,72 11.9,28" />
+                      <polygon class="hex-scan" points="50,6 88.1,28 88.1,72 50,94 11.9,72 11.9,28" />
+                    </Fragment>
+                  )}
+                  {tier === 'okay' && (
+                    <circle class="hex-outline" cx="50" cy="50" r="42" />
+                  )}
+                  {tier === 'bad' && (
+                    <rect class="hex-outline" x="12" y="12" width="76" height="76" rx="2" />
+                  )}
+                </svg>
+                <span class="game-score-num">{g.rating}</span>
+              </div>
+              <div class="game-slot-left">
+                <span class="game-slot-title">{g.title}</span>
+                <div class="game-slot-meta">
+                  <span>{g.platform}</span>
+                  <span class="game-slot-status">{g.status}</span>
+                </div>
               </div>
             </div>
-            <div class="game-score-col" aria-label={`${g.rating} out of 10`}>
-              <div class="game-score-digit" style={`color: ${g.color}; text-shadow: 0 0 14px ${g.glow}`}>
-                {g.rating}<span class="game-score-slash">/10</span>
-              </div>
-              <div class="game-score-meter">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <span class={`game-score-tick${i < g.rating ? ' on' : ''}`} style={i < g.rating ? `background: ${g.color}; box-shadow: 0 0 4px ${g.glow}` : ''}></span>
-                ))}
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <details class="library-dashboard reveal">
         <summary class="library-head">
@@ -352,9 +367,8 @@ const libraryTotals = library.platforms.reduce(
             <input type="email" name="email" id="news-email" placeholder="your@email.com" aria-label="Email address" required autocomplete="email" />
             <span class="news-field-rule" aria-hidden="true"></span>
           </div>
-          <button type="submit" class="news-btn magnetic" id="news-btn">
+          <button type="submit" class="news-btn link-frame magnetic" id="news-btn">
             <span class="news-btn-label">Subscribe</span>
-            <span class="news-btn-arrow" aria-hidden="true">→</span>
           </button>
         </form>
         <p class="news-status" id="news-status"></p>

@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>The Workweek Builder Stack</title>
+
+<!-- Mona Sans, with Google Fonts fallback if the local file isn't reachable -->
+<style>
+  @font-face {
+    font-family: "Mona Sans";
+    src: url("../repos/community/app/frontend/fonts/Mona-Sans.woff2") format("woff2-variations"),
+         url("../repos/community/app/frontend/fonts/Mona-Sans.woff2") format("woff2");
+    font-weight: 200 900;
+    font-stretch: 75% 125%;
+    font-display: swap;
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+
+<style>
+  /* ───────────────────────────── Cookie tokens ───────────────────────────── */
+
+  /* Primitives — from design.md */
+  :root {
+    /* Neutrals (HSL) */
+    --Cookie-white: hsl(0, 0%, 100%);
+    --Cookie-1:  hsl(48, 33%, 97%);
+    --Cookie-5:  hsl(45, 25%, 94%);
+    --Cookie-10: hsl(45, 21%, 89%);
+    --Cookie-20: hsl(46, 18%, 81%);
+    --Cookie-40: hsl(46, 15%, 71%);
+    --Cookie-50: hsl(46, 13%, 61%);
+    --Cookie-60: hsl(46, 10%, 52%);
+    --Cookie-70: hsl(46, 10%, 40%);
+    --Cookie-80: hsl(43, 10%, 27%);
+    --Cookie-90: hsl(40, 11%, 15%);
+    --Cookie-Black: hsl(0, 0%, 0%);
+
+    /* Feedback (subset) — only used for non-brand semantic states */
+    --green-50:  hsl(87, 33%, 95%);
+    --green-100: hsl(94, 35%, 87%);
+    --green-500: hsl(101, 40%, 42%);
+    --yellow-50: hsl(39, 100%, 95%);
+    --yellow-500: hsl(38, 77%, 44%);
+    --red-50:    hsl(6, 83%, 95%);
+    --red-500:   hsl(7, 64%, 46%);
+  }
+
+  /* Semantic tokens — light mode */
+  :root[data-theme="light"] {
+    --text-primary: var(--Cookie-90);
+    --text-secondary: var(--Cookie-70);
+    --text-tertiary: var(--Cookie-60);
+    --text-muted: var(--Cookie-50);
+    --text-disabled: var(--Cookie-40);
+    --text-white: var(--Cookie-white);
+
+    --background-bg-default: var(--Cookie-1);
+    --background-bg-subtle: var(--Cookie-5);
+    --background-bg-muted: var(--Cookie-10);
+    --background-bg-secondary: var(--Cookie-20);
+
+    --background-surface-default: var(--Cookie-white);
+    --background-surface-subtle: var(--Cookie-1);
+    --background-surface-sunken: var(--Cookie-5);
+    --background-surface-hover: var(--Cookie-10);
+    --background-surface-raised: var(--Cookie-20);
+    --background-surface-tooltip: var(--Cookie-80);
+
+    --border-subtle: var(--Cookie-5);
+    --border-default: var(--Cookie-10);
+    --border-strong: var(--Cookie-20);
+    --border-heavy: var(--Cookie-50);
+
+    --button-primary-bg-default: var(--Cookie-70);
+    --button-primary-bg-hover: var(--Cookie-60);
+    --button-primary-text-default: var(--Cookie-white);
+
+    --button-secondary-text-default: var(--Cookie-70);
+    --button-secondary-border-default: var(--Cookie-20);
+
+    /* Neutral accent tokens — replace what brand-X used to do */
+    --accent-fill-bg: var(--Cookie-90);
+    --accent-fill-text: var(--Cookie-1);
+    --accent-soft-bg: var(--Cookie-5);
+    --accent-soft-text: var(--Cookie-90);
+
+    --shadow-default: 0 1px 0 hsla(40,11%,15%,.04), 0 8px 24px -10px hsla(40,11%,15%,.16);
+    --shadow-raised:  0 1px 0 hsla(40,11%,15%,.06), 0 18px 48px -16px hsla(40,11%,15%,.22);
+  }
+
+  /* Spacing tokens (desktop) */
+  :root {
+    --0: 0px;  --xs: 2px;  --sm: 4px;  --md: 8px;  --lg: 12px;  --xl: 16px;
+    --2xl: 24px; --3xl: 32px; --4xl: 40px; --5xl: 48px; --6xl: 64px; --7xl: 80px; --8xl: 96px;
+
+    --type-xxs: 10px; --type-xs: 12px; --type-s: 14px; --type-m: 16px;
+    --type-lg: 18px; --type-xl: 20px; --type-2xl: 24px; --type-3xl: 30px;
+    --type-4xl: 36px; --type-5xl: 48px;
+
+    --w-medium: 500; --w-semibold: 600; --w-black: 900;
+
+    --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px;
+  }
+
+  @media (max-width: 768px) {
+    :root {
+      --sm: 2px; --md: 4px; --lg: 8px; --xl: 12px;
+      --2xl: 16px; --3xl: 24px; --4xl: 28px; --5xl: 32px; --6xl: 32px; --7xl: 40px; --8xl: 48px;
+      --type-m: 14px; --type-lg: 16px; --type-xl: 18px; --type-2xl: 20px; --type-3xl: 24px; --type-4xl: 28px; --type-5xl: 32px;
+    }
+  }
+
+  /* ───────────────────────────── Reset & base ───────────────────────────── */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Mona Sans", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+    background: var(--background-bg-default);
+    color: var(--text-primary);
+    font-size: var(--type-m);
+    font-weight: var(--w-medium);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    transition: background-color 240ms ease, color 240ms ease;
+    overflow: hidden;
+  }
+  ::selection { background: var(--accent-fill-bg); color: var(--accent-fill-text); }
+
+  /* ───────────────────────────── Layout shell ───────────────────────────── */
+  .stage {
+    position: relative;
+    height: 100vh; width: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--xl) var(--3xl);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--background-surface-default);
+    z-index: 10;
+  }
+  .brand-mark {
+    display: flex; align-items: center; gap: var(--md);
+    font-size: var(--type-s); font-weight: var(--w-semibold);
+    color: var(--text-primary); letter-spacing: -0.01em;
+  }
+  .brand-mark .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--text-primary);
+    box-shadow: 0 0 0 4px var(--background-surface-sunken);
+    transition: background-color 240ms ease, box-shadow 240ms ease;
+  }
+  .brand-mark .sep { color: var(--text-muted); font-weight: var(--w-medium); }
+  .brand-mark .work { color: var(--text-secondary); }
+
+  .controls { display: flex; gap: var(--md); align-items: center; }
+  .control {
+    appearance: none; background: transparent; cursor: pointer;
+    border: 1px solid var(--button-secondary-border-default);
+    color: var(--button-secondary-text-default);
+    border-radius: var(--radius-md);
+    height: 36px;
+    padding: 0 var(--lg);
+    font-family: inherit; font-size: var(--type-s); font-weight: var(--w-semibold);
+    display: inline-flex; align-items: center; gap: var(--sm);
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 80ms ease;
+  }
+  .control:hover { background: var(--background-surface-hover); }
+  .control:active { transform: scale(0.98); }
+  .control[aria-pressed="true"] { background: var(--button-primary-bg-default); color: var(--button-primary-text-default); border-color: var(--button-primary-bg-default); }
+
+  /* Scene area */
+  .scenes {
+    position: relative;
+    overflow: hidden;
+  }
+  .scene {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--5xl) var(--6xl);
+    opacity: 0; transform: translateY(24px) scale(0.985);
+    pointer-events: none;
+    transition: opacity 360ms cubic-bezier(.2,.7,.2,1), transform 480ms cubic-bezier(.2,.7,.2,1);
+    overflow: auto;
+  }
+  .scene[data-active="true"] {
+    opacity: 1; transform: none; pointer-events: auto;
+  }
+
+  .scene-inner { width: 100%; max-width: 1080px; }
+
+  /* Eyebrow / kicker */
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: var(--md);
+    font-size: var(--type-xs); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--text-secondary); font-weight: var(--w-semibold);
+    margin-bottom: var(--lg);
+  }
+  .eyebrow::before {
+    content: ""; display: block; width: 22px; height: 2px;
+    background: var(--text-primary); border-radius: 2px;
+  }
+
+  h1.headline {
+    font-size: clamp(36px, 6vw, var(--type-5xl));
+    line-height: 1.04; letter-spacing: -0.025em;
+    font-weight: var(--w-black);
+    margin: 0 0 var(--xl);
+    color: var(--text-primary);
+  }
+  h1.headline em { font-style: italic; color: var(--text-primary); font-weight: var(--w-black); }
+
+  h2.title {
+    font-size: clamp(26px, 3.6vw, var(--type-4xl));
+    line-height: 1.1; letter-spacing: -0.02em;
+    font-weight: var(--w-black);
+    margin: 0 0 var(--lg);
+    color: var(--text-primary);
+  }
+
+  p.lede {
+    font-size: var(--type-lg);
+    color: var(--text-secondary);
+    max-width: 720px;
+    margin: 0 0 var(--2xl);
+  }
+  p.lede b { color: var(--text-primary); font-weight: var(--w-semibold); }
+
+  /* ───────────────────────────── Components (Cookie-flavored) ───────────── */
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 22px; padding: 0 10px;
+    border-radius: 999px;
+    font-size: var(--type-xs); font-weight: var(--w-semibold); letter-spacing: .04em;
+    background: var(--background-surface-sunken);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
+  }
+  .badge.solid {
+    background: var(--accent-soft-bg);
+    color: var(--accent-soft-text);
+    border-color: var(--border-strong);
+  }
+  .badge.success { background: var(--green-50); color: hsl(100,42%,28%); border-color: var(--green-100); }
+  .badge.warning { background: var(--yellow-50); color: hsl(38,76%,26%); border-color: hsl(40,85%,79%); }
+
+  .card {
+    background: var(--background-surface-default);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--2xl);
+    box-shadow: var(--shadow-default);
+  }
+  .card.raised { box-shadow: var(--shadow-raised); }
+
+  .btn {
+    appearance: none; cursor: pointer; font-family: inherit;
+    height: 40px; padding: 0 var(--xl); border-radius: var(--radius-md);
+    font-size: var(--type-s); font-weight: var(--w-semibold);
+    display: inline-flex; align-items: center; gap: var(--md);
+    transition: background-color 160ms ease, color 160ms ease, transform 80ms ease, border-color 160ms ease;
+  }
+  .btn-primary {
+    background: var(--button-primary-bg-default);
+    color: var(--button-primary-text-default);
+    border: 1px solid var(--button-primary-bg-default);
+  }
+  .btn-primary:hover { background: var(--button-primary-bg-hover); border-color: var(--button-primary-bg-hover); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--button-secondary-text-default);
+    border: 1px solid var(--button-secondary-border-default);
+  }
+  .btn-secondary:hover { background: var(--background-surface-hover); }
+
+  /* ───────────────────────────── Scene 1: cold open ─────────────────────── */
+  .cold-open .quote-mark {
+    font-size: 96px; line-height: .8; color: var(--text-tertiary);
+    font-weight: var(--w-black); margin-bottom: var(--md);
+    font-style: italic;
+  }
+  .cold-open .quote {
+    font-size: clamp(28px, 4.4vw, 44px);
+    line-height: 1.18; font-weight: var(--w-medium); letter-spacing: -0.015em;
+    color: var(--text-primary); margin: 0 0 var(--3xl); max-width: 880px;
+  }
+  .cold-open .quote .strike { text-decoration: underline; color: var(--text-primary); text-decoration-thickness: 2px; text-decoration-color: var(--text-muted); text-underline-offset: 4px; }
+  .cold-open .quote .replace { display: inline-block; background: var(--Cookie-10); color: var(--accent-soft-text); padding: 0 8px; border-radius: 6px; }
+
+  /* ───────────────────────────── Scene 2: two-stage ─────────────────────── */
+  .two-stage {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--3xl);
+    align-items: stretch;
+  }
+  @media (max-width: 880px) {
+    .two-stage { grid-template-columns: 1fr; }
+    .two-stage .arrow { transform: rotate(90deg); }
+  }
+  .stage-card {
+    padding: var(--3xl);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-default);
+    background: var(--background-surface-default);
+    display: flex; flex-direction: column; gap: var(--lg);
+    position: relative;
+    overflow: hidden;
+  }
+  .stage-card::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px;
+    background: var(--text-primary);
+  }
+  .stage-card .badge.solid {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--md);
+    height: auto;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    color: var(--text-secondary);
+    font-size: var(--type-xs);
+    font-weight: var(--w-semibold);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .stage-card .badge.solid::before,
+  .stage-card .badge.solid::after {
+    content: "";
+    display: block;
+    width: 18px;
+    height: 1px;
+    background: var(--border-strong);
+  }
+  .stage-card .stage-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--accent-fill-bg); color: var(--accent-fill-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: var(--w-black); font-size: var(--type-lg);
+  }
+  .stage-card h3 {
+    margin: 0; font-size: var(--type-2xl); letter-spacing: -0.01em;
+    font-weight: var(--w-black);
+  }
+  .stage-card .q { font-size: var(--type-s); color: var(--text-tertiary); }
+  .stage-card ul { margin: var(--md) 0 0; padding: 0; list-style: none; }
+  .stage-card li {
+    display: flex; align-items: flex-start; gap: var(--md);
+    padding: var(--md) 0; border-top: 1px solid var(--border-subtle);
+    font-size: var(--type-s); color: var(--text-secondary);
+  }
+  .stage-card li:first-child { border-top: 0; }
+  .stage-card li::before {
+    content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-primary); margin-top: 8px;
+  }
+
+  .arrow {
+    align-self: center; color: var(--text-muted);
+    font-size: 32px; font-weight: var(--w-medium);
+    user-select: none;
+  }
+
+  /* ───────────────────────────── Scene 3: Builder-OS layers ─────────────── */
+  .layers { display: flex; flex-direction: column; gap: var(--lg); margin-top: var(--xl); }
+  .layer {
+    display: grid; grid-template-columns: 64px 1fr auto;
+    gap: var(--xl); align-items: center;
+    padding: var(--xl) var(--2xl);
+    background: var(--background-surface-default);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+  }
+  .layer .num {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--accent-soft-bg); color: var(--accent-soft-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: var(--w-black); font-size: var(--type-lg);
+  }
+  .layer h4 { margin: 0; font-size: var(--type-lg); font-weight: var(--w-semibold); }
+  .layer p  { margin: 2px 0 0; color: var(--text-secondary); font-size: var(--type-s); }
+  .layer .meta {
+    font-size: var(--type-xs); color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: .12em; font-weight: var(--w-semibold);
+  }
+
+  /* ───────────────────────────── Scene 4: PDK lifecycle ─────────────────── */
+  .lifecycle {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--lg);
+    margin-top: var(--xl);
+  }
+  @media (max-width: 920px) { .lifecycle { grid-template-columns: repeat(2, 1fr); } }
+  .step {
+    background: var(--background-surface-default);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--xl);
+    cursor: pointer;
+    transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+    position: relative;
+    text-align: left;
+    color: var(--text-primary);
+    font-family: inherit;
+  }
+  .step:hover, .step[aria-pressed="true"] {
+    border-color: var(--text-primary);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-raised);
+  }
+  .step .num {
+    font-size: var(--type-xs); font-weight: var(--w-semibold); letter-spacing: .14em;
+    color: var(--text-secondary); text-transform: uppercase;
+    margin-bottom: var(--md);
+  }
+  .step h4 { margin: 0 0 var(--sm); font-size: var(--type-lg); font-weight: var(--w-semibold); }
+  .step p  { margin: 0; font-size: var(--type-s); color: var(--text-secondary); min-height: 3em; }
+  .step .skill {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: var(--md);
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--background-surface-sunken); color: var(--text-secondary);
+    font-family: ui-monospace, SF Mono, monospace; font-size: var(--type-xxs);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .step-detail {
+    margin-top: var(--xl);
+    padding: var(--xl) var(--2xl);
+    border-left: 3px solid var(--text-primary);
+    background: var(--background-surface-subtle);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-size: var(--type-s); color: var(--text-secondary);
+    min-height: 56px;
+    transition: background-color 240ms ease;
+  }
+  .step-detail b { color: var(--text-primary); font-weight: var(--w-semibold); }
+
+  /* ───────────────────────────── Scene 5: walked example ────────────────── */
+  .timeline {
+    display: flex; flex-direction: column; gap: 0;
+    margin-top: var(--xl);
+    position: relative;
+  }
+  .timeline::before {
+    content: ""; position: absolute; left: 19px; top: 8px; bottom: 8px;
+    width: 2px; background: var(--border-default);
+  }
+  .tl-item {
+    display: grid; grid-template-columns: 40px 1fr auto;
+    gap: var(--xl); align-items: flex-start;
+    padding: var(--lg) 0;
+    opacity: 0; transform: translateX(-8px);
+    transition: opacity 360ms ease, transform 360ms ease;
+  }
+  .tl-item[data-shown="true"] { opacity: 1; transform: none; }
+  .tl-item .dot {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--background-surface-default);
+    border: 2px solid var(--border-default);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    z-index: 1;
+    transition: background-color 200ms ease, border-color 200ms ease;
+  }
+  .tl-item[data-shown="true"] .dot {
+    background: var(--accent-fill-bg);
+    border-color: var(--accent-fill-bg);
+    color: var(--accent-fill-text);
+  }
+  .tl-item h5 { margin: 4px 0 2px; font-size: var(--type-m); font-weight: var(--w-semibold); }
+  .tl-item p  { margin: 0; font-size: var(--type-s); color: var(--text-secondary); }
+  .tl-item .stamp {
+    font-size: var(--type-xs); color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: .12em; font-weight: var(--w-semibold);
+    white-space: nowrap;
+  }
+
+  .replay {
+    margin-top: var(--xl);
+    display: inline-flex; align-items: center; gap: var(--md);
+  }
+
+  /* ───────────────────────────── Scene 6: outcome ───────────────────────── */
+  .outcome {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--xl);
+    margin-top: var(--2xl);
+  }
+  @media (max-width: 880px) { .outcome { grid-template-columns: 1fr; } }
+  .outcome .stat {
+    padding: var(--2xl);
+    border-radius: var(--radius-lg);
+    background: var(--background-surface-default);
+    border: 1px solid var(--border-default);
+  }
+  .outcome .stat .n {
+    font-size: var(--type-4xl); font-weight: var(--w-black); letter-spacing: -0.02em;
+    color: var(--text-primary); line-height: 1; margin-bottom: var(--sm);
+  }
+  .outcome .stat .l { font-size: var(--type-s); color: var(--text-secondary); }
+
+  .closer { margin-top: var(--2xl); }
+  .closer p {
+    margin: 0; font-size: var(--type-lg); line-height: 1.5;
+    color: var(--text-secondary); max-width: 720px;
+  }
+  .closer p + p { margin-top: var(--lg); }
+  .closer b { color: var(--text-primary); font-weight: var(--w-semibold); }
+
+  /* ───────────────────────────── Bottom nav ─────────────────────────────── */
+  .bottombar {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--xl);
+    align-items: center;
+    padding: var(--xl) var(--3xl);
+    border-top: 1px solid var(--border-subtle);
+    background: var(--background-surface-default);
+  }
+  .progress { display: flex; align-items: center; gap: var(--md); }
+  .progress .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border-strong); cursor: pointer;
+    border: 0;
+    padding: 0;
+    transition: background-color 160ms ease, transform 160ms ease;
+  }
+  .progress .dot[aria-current="true"] {
+    background: var(--text-primary);
+    transform: scale(1.3);
+  }
+  .progress .dot:hover { background: var(--border-heavy); }
+  .progress .label {
+    margin-left: var(--md);
+    font-size: var(--type-xs); color: var(--text-tertiary);
+    letter-spacing: .12em; text-transform: uppercase; font-weight: var(--w-semibold);
+  }
+  .nav-spacer { display: flex; gap: var(--md); justify-content: flex-end; }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+    .scene { transition: opacity 0ms; }
+  }
+</style>
+</head>
+
+<body>
+<div class="stage" role="application" aria-label="Workweek Builder Stack walkthrough">
+
+  <!-- ───────────── Top bar ───────────── -->
+  <header class="topbar">
+    <div class="brand-mark">
+      <span class="dot" aria-hidden="true"></span>
+      <span>Workweek</span>
+      <span class="sep">·</span>
+      <span class="work">Builder Stack</span>
+    </div>
+
+  </header>
+
+  <!-- ───────────── Scene area ───────────── -->
+  <main class="scenes" id="scenes">
+
+    <!-- Scene 0 — title -->
+    <section class="scene" data-active="true" data-scene="0" data-label="Goal">
+      <div class="scene-inner cold-open">
+        <p class="quote">
+          Most teams keep strategy docs, design systems,
+          and engineering standards in different tools, read by different people, enforced by no one.<br><br>
+          What if it were all <span class="replace">one operating system</span> any teammate could just talk to?
+        </p>
+      </div>
+    </section>
+
+    <!-- Scene 1 — two stages -->
+    <section class="scene" data-scene="1" data-label="The shape">
+      <div class="scene-inner">
+        <div class="eyebrow">The shape</div>
+        <h2 class="title">Two stages, one operating system.</h2>
+        <p class="lede">
+          One layer answers <b>what to build</b> against live company data.
+          The next answers <b>how to build it well</b> with our design system, architecture, and review loop.
+          A builder talks to it in plain English; the system runs the rest.
+        </p>
+
+        <div class="two-stage" style="margin-top: var(--2xl)">
+          <div class="stage-card">
+            <span class="badge solid">Stage 1 · Strategy</span>
+            <div style="display:flex;gap:var(--md);align-items:center;">
+              <span class="stage-num">1</span>
+              <div>
+                <h3>builder-OS</h3>
+                <div class="q">What should I build, and why?</div>
+              </div>
+            </div>
+            <ul>
+              <li>Anchored to four objectives — Contributors, Subscribers, NRR, Cost of Sales</li>
+              <li>Live KR pulse from Amplitude + BigQuery</li>
+              <li>Output is a Linear PNP project, posted in #pnp</li>
+            </ul>
+          </div>
+
+          <div class="arrow" aria-hidden="true">→</div>
+
+          <div class="stage-card">
+            <span class="badge solid">Stage 2 · Execution</span>
+            <div style="display:flex;gap:var(--md);align-items:center;">
+              <span class="stage-num">2</span>
+              <div>
+                <h3>product-dev-kit</h3>
+                <div class="q">How do I build it well?</div>
+              </div>
+            </div>
+            <ul>
+              <li>Plan → Build → Review → PR → Launch, enforced by skills</li>
+              <li>Cookie design system always-on, Rails-sunset guardrail</li>
+              <li>Same skills, same quality bar, for engineers and non-engineers</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 2 — Builder-OS layers -->
+    <section class="scene" data-scene="2" data-label="Builder-OS">
+      <div class="scene-inner">
+        <div class="eyebrow">Stage 1 · Builder-OS</div>
+        <h2 class="title">Strategy as a four-layer conversation.</h2>
+        <p class="lede">
+          Anyone in the org can DM <code>@BuilderOS</code> in Slack. Builders open it in Claude Code.
+          Either way, the system walks you through the same four layers — and leaves a Linear project behind.
+        </p>
+
+        <div class="layers">
+          <div class="layer">
+            <div class="num">1</div>
+            <div>
+              <h4>Reference</h4>
+              <p>OKRs, KRs, diagnostics, and targets — defined once, read every conversation.</p>
+            </div>
+            <div class="meta">okrs/*.md</div>
+          </div>
+          <div class="layer">
+            <div class="num">2</div>
+            <div>
+              <h4>Pulse</h4>
+              <p>Live data from Amplitude + BigQuery so proposals are grounded in real numbers.</p>
+            </div>
+            <div class="meta">Amplitude · BigQuery</div>
+          </div>
+          <div class="layer">
+            <div class="num">3</div>
+            <div>
+              <h4>Proposal</h4>
+              <p>Hypothesis, target KR, measurement plan, feature-flag risk call. Pressure-tested before it leaves the room.</p>
+            </div>
+            <div class="meta">proposal-workflow.md</div>
+          </div>
+          <div class="layer">
+            <div class="num">4</div>
+            <div>
+              <h4>Output</h4>
+              <p>Linear project in PNP + #pnp post tagging Alifya. Visible by default, reviewable before any code.</p>
+            </div>
+            <div class="meta">Linear · Slack</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 3 — product-dev-kit lifecycle -->
+    <section class="scene" data-scene="3" data-label="product-dev-kit">
+      <div class="scene-inner">
+        <div class="eyebrow">Stage 2 · product-dev-kit</div>
+        <h2 class="title">A lifecycle the system runs for you.</h2>
+        <p class="lede">
+          Click any step to see what fires. The Cookie design system is always-on,
+          the Rails-sunset guardrail steers new code to <code>nextgen-graphql/</code>,
+          and the status line keeps the builder oriented.
+        </p>
+
+        <div class="lifecycle" role="tablist">
+          <button class="step" role="tab" aria-pressed="true" data-step="0">
+            <div class="num">Step 1</div>
+            <h4>Plan</h4>
+            <p>Scope, design needs, measurement, flag decision, work breakdown.</p>
+            <span class="skill">/preview-project</span>
+          </button>
+          <button class="step" role="tab" aria-pressed="false" data-step="1">
+            <div class="num">Step 2</div>
+            <h4>Build</h4>
+            <p>Cookie tokens, Cookie components, platform conventions.</p>
+            <span class="skill">/cookie-build</span>
+          </button>
+          <button class="step" role="tab" aria-pressed="false" data-step="2">
+            <div class="num">Step 3</div>
+            <h4>Review</h4>
+            <p>Code quality, Cookie compliance, GraphQL architecture.</p>
+            <span class="skill">/review-frontend-pr</span>
+          </button>
+          <button class="step" role="tab" aria-pressed="false" data-step="3">
+            <div class="num">Step 4</div>
+            <h4>PR</h4>
+            <p>Linear ticket auto-moves to In Code Review.</p>
+            <span class="skill">gh pr create</span>
+          </button>
+          <button class="step" role="tab" aria-pressed="false" data-step="4">
+            <div class="num">Step 5</div>
+            <h4>Launch</h4>
+            <p>Rollout gate — channels, audience, copy, checklist.</p>
+            <span class="skill">/rollout-planner</span>
+          </button>
+        </div>
+
+        <div class="step-detail" id="step-detail" aria-live="polite">
+          <b>Plan.</b> Pulls the proposal from Linear, runs <code>/cookie-start</code> for design context,
+          runs <code>/measurement-plan</code> to verify Amplitude + BigQuery instrumentation, decides the feature-flag question,
+          breaks the work into Linear tickets — and only then writes a line of code.
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 4 — walked example -->
+    <section class="scene" data-scene="4" data-label="A real run">
+      <div class="scene-inner">
+        <div class="eyebrow">A real run</div>
+        <h2 class="title">One idea, end-to-end.</h2>
+        <p class="lede">
+          Watch a single notion travel through the stack — from a Slack DM to a measured shipped feature.
+        </p>
+
+        <div class="timeline" id="timeline">
+          <div class="tl-item" data-step="0"><div class="dot">💬</div>
+            <div><h5>“DMs feel buried — we should redesign them.”</h5>
+              <p>Sent to <code>@BuilderOS</code> in Slack by a contributor.</p></div>
+            <div class="stamp">T+0</div></div>
+          <div class="tl-item" data-step="1"><div class="dot">📥</div>
+            <div><h5>Idea triaged into PNP backlog</h5>
+              <p>Bot maps it to KR “Weekly Contributors”, posts a summary in #product-building.</p></div>
+            <div class="stamp">T+2m</div></div>
+          <div class="tl-item" data-step="2"><div class="dot">📊</div>
+            <div><h5>Builder-OS pulls the pulse</h5>
+              <p>Live Amplitude + BigQuery: DM open rate, reply latency, retention impact baseline.</p></div>
+            <div class="stamp">T+10m</div></div>
+          <div class="tl-item" data-step="3"><div class="dot">📝</div>
+            <div><h5>Proposal pressure-tested → Linear project</h5>
+              <p>Hypothesis, target KR, measurement plan, feature-flag = yes (<code>dm-redesign-v2</code>). Posted in #pnp.</p></div>
+            <div class="stamp">T+25m</div></div>
+          <div class="tl-item" data-step="4"><div class="dot">🍪</div>
+            <div><h5><code>/cookie-start</code> + <code>/cookie-build</code></h5>
+              <p>User type, primary action, scope, colorway. Components and tokens from Cookie. No raw hex codes.</p></div>
+            <div class="stamp">Day 1–4</div></div>
+          <div class="tl-item" data-step="5"><div class="dot">🔍</div>
+            <div><h5><code>/review-frontend-pr</code> + <code>/review-nextgen-graphql-pr</code></h5>
+              <p>Cookie compliance ✓ · architecture ✓ · violations fixed before PR opens.</p></div>
+            <div class="stamp">Day 5</div></div>
+          <div class="tl-item" data-step="6"><div class="dot">🚢</div>
+            <div><h5>PR opened → Linear ticket auto-moves → Rollout planner → Ship</h5>
+              <p>Flag retires after 100% rollout. KR pulse picks up the lift on the next pulse cycle.</p></div>
+            <div class="stamp">Day 6+</div></div>
+        </div>
+
+        <div class="replay">
+          <button class="btn btn-secondary" data-action="replay-timeline">
+            <span aria-hidden="true">↻</span> Replay
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 5 — outcome -->
+    <section class="scene" data-scene="5" data-label="Why it matters">
+      <div class="scene-inner">
+        <div class="eyebrow">Why it’s a product, not a toolkit</div>
+        <h2 class="title">More people building. On-strategy by construction.</h2>
+
+        <div class="outcome">
+          <div class="stat">
+            <div class="n">1</div>
+            <div class="l">conversation, instead of a chain of memory and goodwill across docs.</div>
+          </div>
+          <div class="stat">
+            <div class="n">0</div>
+            <div class="l">silent launches — flags, measurement, and rollout gates are non-optional.</div>
+          </div>
+          <div class="stat">
+            <div class="n">∞</div>
+            <div class="l">entry points — anyone in the org can start, no clone or command required.</div>
+          </div>
+        </div>
+
+        <div class="closer">
+          <p>
+            Strategy, measurement, design, architecture, review, and rollout
+            stop being principles a builder has to internalize.
+            They become <b>steps the system runs</b>.
+          </p>
+          <p>
+            The result: more teammates can ship, the work is on-strategy by construction,
+            and every shipped feature arrives with the instrumentation needed to learn from it.
+          </p>
+        </div>
+
+        <div style="margin-top: var(--2xl); display:flex; gap:var(--md);">
+          <button class="btn btn-secondary" data-action="restart">
+            <span aria-hidden="true">↺</span> Restart
+          </button>
+          <button class="btn btn-primary" data-action="goto" data-target="0">
+            Back to the top <span aria-hidden="true">↑</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ───────────── Bottom bar ───────────── -->
+  <footer class="bottombar">
+    <div class="progress" id="progress" role="tablist" aria-label="Scenes">
+      <button class="dot" role="tab" aria-current="true"  aria-label="Scene 1: Goal" data-target="0"></button>
+      <button class="dot" role="tab" aria-current="false" aria-label="Scene 2: The shape" data-target="1"></button>
+      <button class="dot" role="tab" aria-current="false" aria-label="Scene 3: Builder-OS" data-target="2"></button>
+      <button class="dot" role="tab" aria-current="false" aria-label="Scene 4: product-dev-kit" data-target="3"></button>
+      <button class="dot" role="tab" aria-current="false" aria-label="Scene 5: A real run" data-target="4"></button>
+      <button class="dot" role="tab" aria-current="false" aria-label="Scene 6: Why it matters" data-target="5"></button>
+      <span class="label" id="scene-label">Goal</span>
+    </div>
+
+    <div class="nav-spacer">
+      <button class="btn btn-secondary" data-action="prev"><span aria-hidden="true">←</span> Back</button>
+      <button class="btn btn-primary" data-action="next">Next <span aria-hidden="true">→</span></button>
+    </div>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const scenes    = [...document.querySelectorAll(".scene")];
+  const progress  = [...document.querySelectorAll(".progress .dot")];
+  const sceneLbl  = document.getElementById("scene-label");
+  const stepBtns  = [...document.querySelectorAll(".step")];
+  const stepDtl   = document.getElementById("step-detail");
+  const tlItems   = [...document.querySelectorAll(".tl-item")];
+
+  let current = 0;
+  let timelineTimer = null;
+
+  // Step detail copy (Scene 3)
+  const stepDetails = [
+    `<b>Plan.</b> Pulls the proposal from Linear, runs <code>/cookie-start</code> for design context, runs <code>/measurement-plan</code> to verify Amplitude + BigQuery instrumentation, decides the feature-flag question, breaks the work into Linear tickets — and only then writes a line of code.`,
+    `<b>Build.</b> <code>/cookie-build</code> generates production-ready code with Cookie tokens and components — no raw hex, no arbitrary spacing, no primitive hardcoding. Two modes: build from scratch or ingest something built elsewhere.`,
+    `<b>Review.</b> <code>/review-frontend-pr</code> checks Cookie compliance, code quality, and component patterns. <code>/review-nextgen-graphql-pr</code> enforces the AppSync architecture from <code>ARCHITECTURE.md</code>. Violations are fixed before the PR opens.`,
+    `<b>PR.</b> Branch carries the Linear ticket id, the PR description links the project, and the ticket auto-moves to In Code Review. Status line stays in sync — no manual updates required.`,
+    `<b>Launch.</b> If the project has a Rollout milestone, <code>/rollout-planner</code> walks the builder through channels, audience segmentation, copy, and a launch checklist before the flag flips to 100%.`
+  ];
+
+  function go(i) {
+    current = (i + scenes.length) % scenes.length;
+    scenes.forEach((s, idx) => s.dataset.active = String(idx === current));
+    progress.forEach((d, idx) => d.setAttribute("aria-current", String(idx === current)));
+    sceneLbl.textContent = scenes[current].dataset.label || "";
+    if (current === 4) playTimeline();
+    else stopTimeline();
+  }
+
+  // Keyboard
+  window.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+    if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); go(current + 1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); go(current - 1); }
+    else if (/^[1-6]$/.test(e.key)) go(Number(e.key) - 1);
+    else if (e.key === "Home") go(0);
+    else if (e.key === "End") go(scenes.length - 1);
+  });
+
+  // Click handlers (delegated)
+  document.addEventListener("click", e => {
+    const action = e.target.closest("[data-action]")?.dataset.action;
+    if (!action) return;
+    if (action === "next") go(current + 1);
+    if (action === "prev") go(current - 1);
+    if (action === "restart") go(0);
+    if (action === "goto") go(Number(e.target.closest("[data-target]").dataset.target));
+    if (action === "replay-timeline") playTimeline();
+  });
+
+  // Progress dots
+  progress.forEach(dot => dot.addEventListener("click", () => go(Number(dot.dataset.target))));
+
+  // Step tabs (Scene 3)
+  stepBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      stepBtns.forEach(b => b.setAttribute("aria-pressed", "false"));
+      btn.setAttribute("aria-pressed", "true");
+      stepDtl.innerHTML = stepDetails[Number(btn.dataset.step)];
+    });
+  });
+
+  // Timeline animation
+  function stopTimeline() {
+    if (timelineTimer) { clearInterval(timelineTimer); timelineTimer = null; }
+  }
+  function playTimeline() {
+    stopTimeline();
+    tlItems.forEach(t => t.dataset.shown = "false");
+    let i = 0;
+    timelineTimer = setInterval(() => {
+      if (i >= tlItems.length) { stopTimeline(); return; }
+      tlItems[i].dataset.shown = "true";
+      i++;
+    }, 480);
+  }
+
+})();
+</script>
+</body>
+</html>

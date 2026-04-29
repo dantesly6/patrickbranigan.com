@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Builder Experience — /cookie-build</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --Cookie-1:  hsl(48, 33%, 97%);
+    --Cookie-5:  hsl(45, 25%, 94%);
+    --Cookie-10: hsl(45, 21%, 89%);
+    --Cookie-20: hsl(46, 18%, 81%);
+    --Cookie-50: hsl(46, 13%, 61%);
+    --Cookie-60: hsl(46, 10%, 52%);
+    --Cookie-70: hsl(46, 10%, 40%);
+    --Cookie-80: hsl(43, 10%, 27%);
+    --Cookie-90: hsl(40, 11%, 15%);
+    --green-500: hsl(101, 40%, 42%);
+    --green-100: hsl(94, 35%, 87%);
+    --term-bg: hsl(40, 12%, 11%);
+    --term-fg: hsl(46, 18%, 90%);
+    --term-dim: hsl(46, 10%, 60%);
+    --term-accent: hsl(101, 50%, 64%);
+    --term-violet: hsl(258, 70%, 76%);
+    --term-amber: hsl(40, 90%, 70%);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Mona Sans", system-ui, -apple-system, sans-serif;
+    background: var(--Cookie-1);
+    color: var(--Cookie-90);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  .slide {
+    width: 1600px;
+    height: 1000px;
+    padding: 80px 96px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 64px;
+    align-items: center;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--Cookie-70);
+    margin-bottom: 18px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 26px; height: 2px;
+    background: var(--Cookie-90);
+    border-radius: 2px;
+  }
+  h1 {
+    font-size: 52px;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    font-weight: 900;
+    margin: 0 0 22px;
+    color: var(--Cookie-90);
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--Cookie-90);
+  }
+  .lede {
+    font-size: 18px;
+    color: var(--Cookie-70);
+    max-width: 50ch;
+    margin: 0 0 32px;
+  }
+  .lede b { color: var(--Cookie-90); font-weight: 600; }
+  .footnote {
+    margin-top: 32px;
+    display: grid;
+    gap: 12px;
+  }
+  .stat-row {
+    display: flex;
+    gap: 16px;
+    align-items: baseline;
+  }
+  .stat-row .num {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 600;
+    font-size: 24px;
+    color: var(--Cookie-90);
+  }
+  .stat-row .label {
+    font-size: 14px;
+    color: var(--Cookie-70);
+    letter-spacing: 0.02em;
+  }
+
+  /* Terminal window */
+  .term {
+    background: var(--term-bg);
+    border-radius: 14px;
+    box-shadow: 0 32px 80px -16px hsla(40, 11%, 15%, 0.32),
+                0 4px 12px -2px hsla(40, 11%, 15%, 0.16);
+    overflow: hidden;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--term-fg);
+  }
+  .term-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: hsl(40, 12%, 14%);
+    border-bottom: 1px solid hsl(40, 12%, 18%);
+  }
+  .term-dots { display: flex; gap: 6px; }
+  .term-dots span {
+    width: 11px; height: 11px; border-radius: 50%;
+  }
+  .term-dots span:nth-child(1) { background: hsl(2, 65%, 58%); }
+  .term-dots span:nth-child(2) { background: hsl(40, 80%, 58%); }
+  .term-dots span:nth-child(3) { background: hsl(140, 50%, 50%); }
+  .term-path {
+    color: var(--term-dim);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+  .term-path b { color: var(--term-fg); font-weight: 500; }
+  .term-body { padding: 22px 26px; }
+  .prompt { color: var(--term-violet); }
+  .cmd { color: var(--term-fg); }
+  .term-line { white-space: pre; }
+  .check { color: var(--term-accent); }
+  .dim { color: var(--term-dim); }
+  .accent { color: var(--term-amber); }
+  .keep-fg { color: var(--term-fg); }
+  .term-section {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed hsl(40, 12%, 22%);
+  }
+  .term-output {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 4px 12px;
+    margin-top: 10px;
+  }
+  .term-output .k { color: var(--term-dim); }
+  .term-output .v { color: var(--term-fg); }
+  .audit {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    color: var(--term-dim);
+    font-size: 13px;
+  }
+  .audit b { color: var(--term-accent); font-weight: 600; }
+  .term-statusline {
+    border-top: 1px solid hsl(40, 12%, 18%);
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--term-dim);
+    display: flex;
+    justify-content: space-between;
+    background: hsl(40, 12%, 9%);
+  }
+  .term-statusline .right { display: flex; gap: 14px; }
+  .term-statusline .pill {
+    background: hsl(40, 12%, 18%);
+    color: var(--term-fg);
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .pulse { color: var(--term-accent); }
+</style>
+</head>
+<body>
+  <div class="slide">
+    <!-- Left: copy -->
+    <div>
+      <div class="eyebrow">Stage 2 · Product-dev-kit · /cookie-build</div>
+      <h1>An idea becomes a Linear ticket and a Cookie-built PR — in one conversation.</h1>
+      <p class="lede">
+        What used to be <b>three docs, two tools, and a week of pings</b> is one prompt. The Builder Stack pulls live measurement, design tokens, and architecture context — then writes the plan, the components, and the rollout gate before the PR opens.
+      </p>
+    </div>
+
+    <!-- Right: terminal -->
+    <div class="term">
+      <div class="term-head">
+        <div class="term-dots"><span></span><span></span><span></span></div>
+        <div class="term-path"><b>workweek</b> · builder-os · /cookie-build</div>
+      </div>
+      <div class="term-body">
+        <div class="term-line"><span class="prompt">›</span> <span class="cmd">/cookie-build replace events empty state</span></div>
+
+        <div class="term-section" style="border:0;padding:0;margin-top:14px;">
+          <div class="term-line"><span class="check">✓</span> <span class="keep-fg">Pulled Cookie tokens</span> <span class="dim">— 10 collections, 372 variables</span></div>
+          <div class="term-line"><span class="check">✓</span> <span class="keep-fg">Pulled measurement plan</span> <span class="dim">— KR: weekly contributors · Amplitude</span></div>
+          <div class="term-line"><span class="check">✓</span> <span class="keep-fg">Flag decision</span> <span class="dim">—</span> <span class="accent">dm-empty-state-v2</span></div>
+          <div class="term-line"><span class="check">✓</span> <span class="keep-fg">Generated 3 components</span> <span class="dim">— Cookie tokens · platform conventions</span></div>
+          <div class="term-line"><span class="check">✓</span> <span class="keep-fg">Architecture audit</span> <span class="dim">—</span> <span class="check">nextgen-graphql ✓</span></div>
+        </div>
+
+        <div class="term-section">
+          <div class="term-output">
+            <div class="k">Linear</div><div class="v">PNP-2049 <span class="dim">— hypothesis · KR · measurement · flag</span></div>
+            <div class="k">Branch</div><div class="v">feat/empty-state-events</div>
+            <div class="k">PR</div><div class="v">#4421 <span class="dim">→ In Code Review</span></div>
+            <div class="k">Rollout</div><div class="v"><span class="dim">queued ·</span> /rollout-planner ready</div>
+          </div>
+          <div class="audit">
+            <span><b>0</b> drift</span>
+            <span><b>0</b> raw hex</span>
+            <span><b>0</b> hardcoded spacing</span>
+            <span><b>0</b> primitives</span>
+          </div>
+        </div>
+      </div>
+      <div class="term-statusline">
+        <span><span class="pulse">●</span> builder-os <span class="dim">· cookie@2.4.1 · architecture@latest</span></span>
+        <span class="right">
+          <span class="pill">on-strategy</span>
+          <span class="pill">measured</span>
+          <span class="pill">flagged</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
