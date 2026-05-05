@@ -869,6 +869,40 @@ const {
       });
 
       // ============================
+      // Contact button — copy email to clipboard
+      // ============================
+      const contactBtn = document.getElementById('contact-copy') as HTMLButtonElement | null;
+      if (contactBtn) {
+        const labelEl = contactBtn.querySelector('.contact-copy-label');
+        const originalLabel = labelEl?.textContent || 'Contact';
+        let resetTimer: number | undefined;
+        contactBtn.addEventListener('click', async () => {
+          const email = contactBtn.dataset.email || '';
+          if (!email) return;
+          try {
+            await navigator.clipboard.writeText(email);
+          } catch {
+            const ta = document.createElement('textarea');
+            ta.value = email;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'absolute';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch {}
+            document.body.removeChild(ta);
+          }
+          if (labelEl) labelEl.textContent = 'Copied — patrickbranigan@gmail.com';
+          contactBtn.classList.add('copied');
+          window.clearTimeout(resetTimer);
+          resetTimer = window.setTimeout(() => {
+            if (labelEl) labelEl.textContent = originalLabel;
+            contactBtn.classList.remove('copied');
+          }, 2400);
+        });
+      }
+
+      // ============================
       // Lightbox — tap-to-zoom on filmstrip images
       // ============================
       const lightbox = document.getElementById('lightbox');

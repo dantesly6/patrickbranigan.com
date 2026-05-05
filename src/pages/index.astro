@@ -314,7 +314,9 @@ const libraryTotals = library.platforms.reduce(
     <footer class="footer reveal">
       <div class="footer-links">
         <a href="https://www.linkedin.com/in/patrickbranigan/" class="link-frame magnetic" target="_blank" rel="noopener">LinkedIn</a>
-        <a href="mailto:patrickbranigan@gmail.com" class="link-frame magnetic">Contact</a>
+        <button type="button" class="link-frame magnetic contact-copy" id="contact-copy" data-email="patrickbranigan@gmail.com">
+          <span class="contact-copy-label">Contact</span>
+        </button>
       </div>
       <p class="mono-xs">&copy; {new Date().getFullYear()} · Built with care, curiosity, and too much coffee.</p>
     </footer>
@@ -463,6 +465,25 @@ const libraryTotals = library.platforms.reduce(
     gap: 1.5rem;
     margin-bottom: 1rem;
     font-size: 0.9rem;
+  }
+
+  .contact-copy {
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    padding: 2px 6px;
+    cursor: pointer;
+    color: var(--text-mid);
+    transition: color 200ms var(--ease), text-shadow 200ms var(--ease);
+  }
+  .contact-copy:hover {
+    color: var(--green);
+    text-shadow: 0 0 12px var(--green-glow);
+  }
+  .contact-copy.copied .contact-copy-label {
+    color: var(--green);
+    text-shadow: 0 0 12px var(--green-glow);
   }
 
   /* ===== Responsive ===== */
