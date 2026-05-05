@@ -827,7 +827,7 @@ const {
         setInterval(cyclePlaceholder, 2600);
       }
 
-      newsForm?.addEventListener('submit', (e) => {
+      newsForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!newsEmail || !newsStatus || !newsBtn) return;
         if (!newsEmail.checkValidity()) {
@@ -835,10 +835,37 @@ const {
           newsStatus.classList.remove('success');
           return;
         }
-        newsStatus.textContent = `You're in — a note will land with ${newsEmail.value} soon.`;
-        newsStatus.classList.add('success');
+        const labelEl = newsBtn.querySelector('.news-btn-label');
+        const originalLabel = labelEl?.textContent || 'Subscribe';
         newsBtn.disabled = true;
-        newsBtn.textContent = 'Subscribed';
+        if (labelEl) labelEl.textContent = 'Subscribing…';
+        newsStatus.classList.remove('success');
+        newsStatus.textContent = '';
+        try {
+          const res = await fetch('/api/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: newsEmail.value }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            const msg =
+              (data as { error?: string }).error === 'invalid_email'
+                ? 'That looks off — use a real email.'
+                : 'Couldn’t subscribe just now. Try again in a minute.';
+            newsStatus.textContent = msg;
+            newsBtn.disabled = false;
+            if (labelEl) labelEl.textContent = originalLabel;
+            return;
+          }
+          newsStatus.textContent = `You’re in — a confirmation will land with ${newsEmail.value} soon.`;
+          newsStatus.classList.add('success');
+          if (labelEl) labelEl.textContent = 'Subscribed';
+        } catch {
+          newsStatus.textContent = 'Network hiccup. Try again in a minute.';
+          newsBtn.disabled = false;
+          if (labelEl) labelEl.textContent = originalLabel;
+        }
       });
 
       // ============================
