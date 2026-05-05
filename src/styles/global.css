@@ -981,7 +981,7 @@ a:hover { color: var(--green); }
   transition: opacity 240ms var(--ease), visibility 240ms var(--ease);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  touch-action: pinch-zoom pan-x pan-y;
+  touch-action: pan-x pan-y;
 }
 .lightbox.open {
   opacity: 1;
@@ -994,7 +994,6 @@ a:hover { color: var(--green); }
   align-items: center;
   justify-content: center;
   padding: 2.5rem;
-  cursor: zoom-out;
 }
 .lightbox-content img {
   max-width: 100%;
@@ -1002,9 +1001,17 @@ a:hover { color: var(--green); }
   width: auto;
   height: auto;
   display: block;
-  cursor: zoom-out;
+  cursor: zoom-in;
   user-select: none;
   -webkit-user-drag: none;
+  transition: transform 200ms var(--ease);
+}
+.lightbox-content img.zoomed {
+  max-width: none;
+  max-height: none;
+  width: 200vw;
+  height: auto;
+  cursor: zoom-out;
 }
 .lightbox-close {
   position: fixed;

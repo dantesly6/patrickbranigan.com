@@ -880,13 +880,18 @@ const {
         if (!lightbox || !lightboxImg) return;
         lightboxImg.src = src;
         lightboxImg.alt = alt;
+        lightboxImg.classList.remove('zoomed');
         lightbox.classList.add('open');
         lightbox.setAttribute('aria-hidden', 'false');
+        if (lightbox) lightbox.scrollTop = 0;
       }
       function closeLightbox() {
         lightbox?.classList.remove('open');
         lightbox?.setAttribute('aria-hidden', 'true');
-        if (lightboxImg) lightboxImg.src = '';
+        if (lightboxImg) {
+          lightboxImg.src = '';
+          lightboxImg.classList.remove('zoomed');
+        }
       }
 
       projOverlay?.addEventListener('click', (e) => {
@@ -901,6 +906,18 @@ const {
       lightboxContent?.addEventListener('click', (e) => {
         if (e.target === lightboxContent) {
           closeLightbox();
+        }
+      });
+      lightboxImg?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!lightboxImg || !lightbox) return;
+        const wasZoomed = lightboxImg.classList.toggle('zoomed');
+        if (wasZoomed) {
+          requestAnimationFrame(() => {
+            const targetX = (lightboxImg.offsetWidth - lightbox.clientWidth) / 2;
+            const targetY = (lightboxImg.offsetHeight - lightbox.clientHeight) / 2;
+            lightbox.scrollTo({ left: Math.max(0, targetX), top: Math.max(0, targetY) });
+          });
         }
       });
       document.addEventListener('keydown', (e) => {
