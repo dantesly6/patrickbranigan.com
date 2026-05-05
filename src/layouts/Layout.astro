@@ -899,7 +899,7 @@ const {
 
       lightboxClose?.addEventListener('click', closeLightbox);
       lightboxContent?.addEventListener('click', (e) => {
-        if (e.target === lightboxContent || (e.target as HTMLElement).tagName === 'IMG') {
+        if (e.target === lightboxContent) {
           closeLightbox();
         }
       });
