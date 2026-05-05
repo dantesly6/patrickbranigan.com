@@ -434,16 +434,21 @@ const {
         }, FADE_MS);
       }
 
-      function showWritingDetail(date: string, title: string, desc: string) {
+      function showWritingDetail(date: string, title: string, bodyHTML: string) {
         if (!writingDetailDate || !writingDetailTitle || !writingDetailDesc) return;
         writingList?.classList.add('fade-out');
         setTimeout(() => {
           writingDetailDate.textContent = date;
           writingDetailTitle.textContent = title;
-          writingDetailDesc.textContent = desc;
+          writingDetailDesc.innerHTML = bodyHTML;
           writingDetail?.classList.remove('fade-out');
           writingOverlay!.scrollTop = 0;
         }, FADE_MS);
+      }
+
+      function getWritingBodyHTML(idx: number | string): string {
+        const el = document.querySelector(`.writing-list-item[data-writing-idx="${idx}"] .writing-list-body`);
+        return el ? el.innerHTML : '';
       }
 
       document.getElementById('open-writing-log')?.addEventListener('click', () => {
@@ -475,10 +480,11 @@ const {
       document.querySelectorAll('.writing-list-item').forEach((item) => {
         item.addEventListener('click', () => {
           const el = item as HTMLElement;
+          const idx = el.dataset.writingIdx || '0';
           showWritingDetail(
             el.dataset.writingDate || '',
             el.dataset.writingTitle || '',
-            el.dataset.writingDesc || ''
+            getWritingBodyHTML(idx)
           );
         });
       });
@@ -488,9 +494,11 @@ const {
       document.getElementById('writing-readmore')?.addEventListener('click', (e) => {
         const el = e.currentTarget as HTMLElement;
         if (!writingOverlay || !writingDetailDate || !writingDetailTitle || !writingDetailDesc) return;
-        writingDetailDate.textContent = el.dataset.writingDate || '';
-        writingDetailTitle.textContent = el.dataset.writingTitle || '';
-        writingDetailDesc.textContent = el.dataset.writingDesc || '';
+        const idx = el.dataset.writingIdx || '0';
+        const sourceItem = document.querySelector(`.writing-list-item[data-writing-idx="${idx}"]`) as HTMLElement | null;
+        writingDetailDate.textContent = sourceItem?.dataset.writingDate || '';
+        writingDetailTitle.textContent = sourceItem?.dataset.writingTitle || '';
+        writingDetailDesc.innerHTML = getWritingBodyHTML(idx);
         writingList?.classList.add('fade-out');
         writingDetail?.classList.remove('fade-out');
         writingOverlay.scrollTop = 0;

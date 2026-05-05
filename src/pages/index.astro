@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getCollection, render } from 'astro:content';
 
 const projects = [
   {
@@ -63,108 +64,24 @@ const projects = [
   },
 ];
 
-const writing = [
-  {
-    title: 'First post incoming',
-    date: '2026.04.15 — Entry 020',
-    desc: "Working on a newsletter about navigating the world of games as an adult — for those who need to but don't want to become experts. Not expecting any of the shit I write to land, but it's a space to try.",
-  },
-  {
-    title: 'The myth of the casual gamer',
-    date: '2026.04.08 — Entry 019',
-    desc: "Everyone plays games. Most people just don't call themselves gamers. That gap between behavior and identity is where all the interesting design problems live.",
-  },
-  {
-    title: 'Systems that teach without tutorials',
-    date: '2026.03.30 — Entry 018',
-    desc: "The best onboarding is invisible. Breath of the Wild drops you on a plateau and lets physics do the teaching. Most SaaS could learn from this.",
-  },
-  {
-    title: 'Why I stopped reading design Twitter',
-    date: '2026.03.22 — Entry 017',
-    desc: "Too much performance, not enough practice. I'd rather spend an hour in Figma making something bad than an hour reading about making something good.",
-  },
-  {
-    title: 'Friction as a feature',
-    date: '2026.03.14 — Entry 016',
-    desc: "Not every interaction needs to be frictionless. Souls games proved that difficulty is a design choice, not a flaw. Sometimes the struggle is the point.",
-  },
-  {
-    title: 'The design system nobody asked for',
-    date: '2026.03.05 — Entry 015',
-    desc: "Built a component library over a weekend. Nobody needed it yet. But the act of building it clarified how I think about the product more than any meeting could.",
-  },
-  {
-    title: 'On shipping scared',
-    date: '2026.02.25 — Entry 014',
-    desc: "If you're not a little embarrassed by what you shipped, you waited too long. The first version of everything I've made has been rough. That's the point.",
-  },
-  {
-    title: 'Game UI is ahead of product UI',
-    date: '2026.02.17 — Entry 013',
-    desc: "HUDs, radial menus, contextual prompts — games solved information density decades ago. Product design is just now catching up.",
-  },
-  {
-    title: 'The newsletter problem',
-    date: '2026.02.08 — Entry 012',
-    desc: "Everyone has a newsletter. Most of them are content marketing wearing a trench coat. I want mine to be something I'd actually read on a Sunday morning.",
-  },
-  {
-    title: 'Designing for people who don\'t read',
-    date: '2026.01.30 — Entry 011',
-    desc: "Nobody reads your copy. They scan. They guess. They tap the biggest button. Design for that reality instead of fighting it.",
-  },
-  {
-    title: 'What speedrunners teach us about UX',
-    date: '2026.01.22 — Entry 010',
-    desc: "Speedrunners find every crack in your system. They're the ultimate edge-case users. Watching them break games taught me more about robust design than any usability study.",
-  },
-  {
-    title: 'The courage to delete features',
-    date: '2026.01.14 — Entry 009',
-    desc: "Addition is easy. Subtraction is where the real design happens. The hardest conversations I've had were about removing something that someone spent months building.",
-  },
-  {
-    title: 'First-principles vs. best practices',
-    date: '2026.01.05 — Entry 008',
-    desc: "Best practices are other people's first principles, frozen in time. They're useful as starting points but dangerous as destinations.",
-  },
-  {
-    title: 'Side quests are the real game',
-    date: '2025.12.28 — Entry 007',
-    desc: "The main quest gives you direction. The side quests give you the world. Same thing in product work — the detours teach you what the roadmap can't.",
-  },
-  {
-    title: 'Why I prototype in code',
-    date: '2025.12.19 — Entry 006',
-    desc: "Figma lies to you. It tells you everything will be smooth and pixel-perfect. Code tells you the truth about what's actually possible in the time you have.",
-  },
-  {
-    title: 'The inventory problem',
-    date: '2025.12.10 — Entry 005',
-    desc: "Every RPG eventually drowns you in loot. Every SaaS eventually drowns you in settings. The design challenge is identical: make abundance feel manageable.",
-  },
-  {
-    title: 'Taste is just pattern recognition',
-    date: '2025.12.02 — Entry 004',
-    desc: "Good taste isn't magic. It's exposure plus memory. The more things you've seen — good and bad — the faster you can tell the difference.",
-  },
-  {
-    title: 'Designing alone vs. designing in public',
-    date: '2025.11.23 — Entry 003',
-    desc: "I spent years polishing work in private before showing anyone. Now I share rough ideas early. The feedback hurts more but the work gets better faster.",
-  },
-  {
-    title: 'Loading screens as design opportunities',
-    date: '2025.11.14 — Entry 002',
-    desc: "Bayonetta lets you practice combos on the loading screen. Most apps show you a spinner. There's a metaphor in there somewhere about respecting people's time.",
-  },
-  {
-    title: 'Why I started writing',
-    date: '2025.11.05 — Entry 001',
-    desc: "Not because I have answers. Because writing forces me to figure out what I actually think instead of just vibing with half-formed opinions.",
-  },
-];
+const writingEntriesRaw = await getCollection('writing');
+const writingSorted = writingEntriesRaw.sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime()
+);
+const writing = await Promise.all(
+  writingSorted.map(async (entry, i) => {
+    const { Content } = await render(entry);
+    const number = writingSorted.length - i;
+    const d = entry.data.date;
+    const dateStr = `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')} — Entry ${String(number).padStart(3, '0')}`;
+    return {
+      title: entry.data.title,
+      date: dateStr,
+      excerpt: entry.data.excerpt,
+      Content,
+    };
+  })
+);
 
 function ratingColor(r: number) {
   if (r <= 3) return { color: '#ef4444', glow: 'rgba(239,68,68,0.3)' };
@@ -245,33 +162,40 @@ const libraryTotals = library.platforms.reduce(
     <section id="writing">
       <p class="section-tag reveal">Thinking</p>
       <div class="stagger">
-        {(() => {
+        {writing.length > 0 && (() => {
           const featured = writing[0];
-          const words = featured.desc.split(/\s+/);
-          const isLong = words.length > 400;
-          const preview = isLong ? words.slice(0, 400).join(' ') + '…' : featured.desc;
+          const FeaturedContent = featured.Content;
           return (
             <div class="writing-block">
               <span class="mono-sm">{featured.date}</span>
               <h3>{featured.title}</h3>
-              <p>{preview}</p>
-              {isLong && (
-                <button
-                  type="button"
-                  class="writing-readmore mono-sm"
-                  id="writing-readmore"
-                  data-writing-date={featured.date}
-                  data-writing-title={featured.title}
-                  data-writing-desc={featured.desc}
-                >
-                  Read more →
-                </button>
+              {featured.excerpt ? (
+                <Fragment>
+                  <p>{featured.excerpt}</p>
+                  <button
+                    type="button"
+                    class="writing-readmore mono-sm"
+                    id="writing-readmore"
+                    data-writing-idx="0"
+                  >
+                    Read more →
+                  </button>
+                </Fragment>
+              ) : (
+                <div class="writing-body-inline">
+                  <FeaturedContent />
+                </div>
               )}
             </div>
           );
         })()}
+        {writing.length === 0 && (
+          <div class="writing-block">
+            <h3>First entry coming soon.</h3>
+          </div>
+        )}
         <span class="link-frame writing-cta magnetic" id="open-writing-log">
-          {writing.length} entries logged
+          {writing.length} {writing.length === 1 ? 'entry' : 'entries'} logged
         </span>
       </div>
     </section>
@@ -281,18 +205,22 @@ const libraryTotals = library.platforms.reduce(
       <button class="filmstrip-close" id="writing-overlay-close" aria-label="Close">&times;</button>
       <div class="writing-overlay-list" id="writing-list">
         <p class="section-tag">Log entries</p>
-        {writing.map((w, i) => (
-          <div class="writing-list-item" data-writing-idx={i} data-writing-date={w.date} data-writing-title={w.title} data-writing-desc={w.desc}>
-            <span class="mono-sm">{w.date}</span>
-            <h3>{w.title}</h3>
-          </div>
-        ))}
+        {writing.map((w, i) => {
+          const Body = w.Content;
+          return (
+            <div class="writing-list-item" data-writing-idx={i} data-writing-date={w.date} data-writing-title={w.title}>
+              <span class="mono-sm">{w.date}</span>
+              <h3>{w.title}</h3>
+              <div class="writing-list-body" hidden><Body /></div>
+            </div>
+          );
+        })}
       </div>
       <div class="writing-overlay-detail fade-out" id="writing-detail">
         <button class="writing-back mono-sm" id="writing-back">← back to log</button>
         <span class="mono-sm" id="writing-detail-date"></span>
         <h2 id="writing-detail-title"></h2>
-        <p id="writing-detail-desc"></p>
+        <div id="writing-detail-desc"></div>
       </div>
     </div>
 
