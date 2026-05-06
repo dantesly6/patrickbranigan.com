@@ -1416,6 +1416,13 @@ a:hover { color: var(--green); }
 .news-btn:disabled { cursor: not-allowed; opacity: 0.7; }
 .news-btn:disabled:hover { color: var(--text); text-shadow: none; }
 
+@media (max-width: 600px) {
+  .news-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .news-status {
   margin-top: 1rem;
   font-size: 0.75rem;
