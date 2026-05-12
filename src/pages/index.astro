@@ -174,33 +174,32 @@ const libraryTotals = library.platforms.reduce(
     <section id="writing">
       <p class="section-tag reveal">Thinking</p>
       <div class="stagger">
-        {writing.length > 0 && (() => {
-          const featured = writing[0];
-          const FeaturedContent = featured.Content;
+        {writing.slice(0, 3).map((entry, i) => {
+          const EntryContent = entry.Content;
           return (
             <div class="writing-block">
-              <span class="mono-sm">{featured.date}</span>
-              <h3>{featured.title}</h3>
-              {featured.excerpt ? (
+              <span class="mono-sm">{entry.date}</span>
+              <h3>{entry.title}</h3>
+              {entry.excerpt ? (
                 <Fragment>
-                  <p>{featured.excerpt}</p>
+                  <p>{entry.excerpt}</p>
                   <button
                     type="button"
-                    class="writing-readmore mono-sm"
-                    id="writing-readmore"
-                    data-writing-idx="0"
+                    class="writing-readmore"
+                    data-writing-idx={i}
                   >
-                    Read more →
+                    <span class="writing-readmore-label">READ</span>
+                    <span class="writing-readmore-arrow">→</span>
                   </button>
                 </Fragment>
               ) : (
                 <div class="writing-body-inline">
-                  <FeaturedContent />
+                  <EntryContent />
                 </div>
               )}
             </div>
           );
-        })()}
+        })}
         {writing.length === 0 && (
           <div class="writing-block">
             <h3>First entry coming soon.</h3>
@@ -386,7 +385,7 @@ const libraryTotals = library.platforms.reduce(
 
   /* ===== Writing — journal log ===== */
   .writing-block {
-    margin-bottom: 1.5rem;
+    margin-bottom: 3rem;
   }
 
   .writing-block .mono-sm {
@@ -400,19 +399,34 @@ const libraryTotals = library.platforms.reduce(
   .writing-block h3 { margin-bottom: 0.5rem; }
 
   .writing-readmore {
-    display: inline-block;
-    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
     padding: 0;
     background: none;
     border: none;
-    color: var(--green);
-    text-shadow: 0 0 8px var(--green-glow);
-    letter-spacing: 0.04em;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    color: var(--text-dim);
     cursor: pointer;
-    transition: opacity 200ms var(--ease);
+    transition: color 300ms ease;
   }
 
-  .writing-readmore:hover { opacity: 0.75; }
+  .writing-readmore-arrow {
+    font-size: 1.1rem;
+    transform: translateX(0);
+    transition: transform 300ms var(--ease);
+  }
+
+  .writing-block:hover .writing-readmore {
+    color: var(--green);
+  }
+
+  .writing-block:hover .writing-readmore-arrow {
+    transform: translateX(6px);
+  }
 
   .writing-cta {
     font-family: var(--mono);

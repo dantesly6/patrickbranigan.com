@@ -491,19 +491,21 @@ const {
 
       writingBack?.addEventListener('click', showWritingList);
 
-      document.getElementById('writing-readmore')?.addEventListener('click', (e) => {
-        const el = e.currentTarget as HTMLElement;
-        if (!writingOverlay || !writingDetailDate || !writingDetailTitle || !writingDetailDesc) return;
-        const idx = el.dataset.writingIdx || '0';
-        const sourceItem = document.querySelector(`.writing-list-item[data-writing-idx="${idx}"]`) as HTMLElement | null;
-        writingDetailDate.textContent = sourceItem?.dataset.writingDate || '';
-        writingDetailTitle.textContent = sourceItem?.dataset.writingTitle || '';
-        writingDetailDesc.innerHTML = getWritingBodyHTML(idx);
-        writingList?.classList.add('fade-out');
-        writingDetail?.classList.remove('fade-out');
-        writingOverlay.scrollTop = 0;
-        writingOverlay.classList.add('open');
-        writingOpen = true;
+      document.querySelectorAll('.writing-readmore').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const el = e.currentTarget as HTMLElement;
+          if (!writingOverlay || !writingDetailDate || !writingDetailTitle || !writingDetailDesc) return;
+          const idx = el.dataset.writingIdx || '0';
+          const sourceItem = document.querySelector(`.writing-list-item[data-writing-idx="${idx}"]`) as HTMLElement | null;
+          writingDetailDate.textContent = sourceItem?.dataset.writingDate || '';
+          writingDetailTitle.textContent = sourceItem?.dataset.writingTitle || '';
+          writingDetailDesc.innerHTML = getWritingBodyHTML(idx);
+          writingList?.classList.add('fade-out');
+          writingDetail?.classList.remove('fade-out');
+          writingOverlay.scrollTop = 0;
+          writingOverlay.classList.add('open');
+          writingOpen = true;
+        });
       });
 
       // ============================
