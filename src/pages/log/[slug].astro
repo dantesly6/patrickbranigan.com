@@ -1,0 +1,63 @@
+---
+import Reading from '../../layouts/Reading.astro';
+import { getWritingItems } from '../../lib/writing';
+import { render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const items = await getWritingItems();
+  return items.map((item) => ({
+    params: { slug: item.slug },
+    props: { item },
+  }));
+}
+
+const { item } = Astro.props;
+const { Content } = await render(item.entry);
+const description = item.excerpt || `A log entry by Patrick Branigan.`;
+---
+
+<Reading title={item.title} description={description} ogType="article">
+  <main class="log-page">
+    <a class="log-back mono-sm" href="/#writing">← patrickbranigan.com</a>
+    <article>
+      <span class="mono-sm log-date">{item.date}</span>
+      <h1 class="log-title">{item.title}</h1>
+      <div class="writing-body-inline log-body">
+        <Content />
+      </div>
+    </article>
+  </main>
+</Reading>
+
+<style>
+  .log-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: clamp(4rem, 14vh, 9rem) var(--pad, 1.5rem) 8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .log-back {
+    color: var(--text-dim);
+    text-decoration: none;
+    width: fit-content;
+    letter-spacing: 0.04em;
+    transition: color 300ms ease, text-shadow 300ms ease;
+  }
+  .log-back:hover {
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green-glow);
+  }
+  .log-date {
+    display: block;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green-glow);
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+  }
+  .log-title {
+    line-height: 1.3;
+    margin-bottom: 1.75rem;
+  }
+</style>

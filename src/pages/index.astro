@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getCollection, render } from 'astro:content';
+import { render } from 'astro:content';
+import { getWritingItems } from '../lib/writing';
 
 const projects = [
   {
@@ -64,20 +65,15 @@ const projects = [
   },
 ];
 
-const writingEntriesRaw = await getCollection('writing');
-const writingSorted = writingEntriesRaw.sort(
-  (a, b) => b.data.date.getTime() - a.data.date.getTime()
-);
+const writingItems = await getWritingItems();
 const writing = await Promise.all(
-  writingSorted.map(async (entry, i) => {
-    const { Content } = await render(entry);
-    const number = writingSorted.length - i;
-    const d = entry.data.date;
-    const dateStr = `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')} — Entry ${String(number).padStart(3, '0')}`;
+  writingItems.map(async (it) => {
+    const { Content } = await render(it.entry);
     return {
-      title: entry.data.title,
-      date: dateStr,
-      excerpt: entry.data.excerpt,
+      slug: it.slug,
+      title: it.title,
+      date: it.date,
+      excerpt: it.excerpt,
       Content,
     };
   })
@@ -187,6 +183,7 @@ const libraryTotals = library.platforms.reduce(
                     type="button"
                     class="writing-readmore"
                     data-writing-idx={i}
+                    data-writing-slug={entry.slug}
                   >
                     <span class="writing-readmore-label">READ</span>
                     <span class="writing-readmore-arrow">→</span>
@@ -219,7 +216,7 @@ const libraryTotals = library.platforms.reduce(
         {writing.map((w, i) => {
           const Body = w.Content;
           return (
-            <div class="writing-list-item" data-writing-idx={i} data-writing-date={w.date} data-writing-title={w.title}>
+            <div class="writing-list-item" data-writing-idx={i} data-writing-date={w.date} data-writing-title={w.title} data-writing-slug={w.slug}>
               <span class="mono-sm">{w.date}</span>
               <h3>{w.title}</h3>
               <div class="writing-list-body" hidden><Body /></div>

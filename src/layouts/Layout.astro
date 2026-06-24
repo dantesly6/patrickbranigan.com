@@ -15,8 +15,11 @@ const {
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site).href} />
+    <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
+    <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site).href} />
     <title>{title}</title>
   </head>
   <body>
@@ -426,7 +429,14 @@ const {
       let writingOpen = false;
       const FADE_MS = 400;
 
+      // Reflect the open log in the address bar (without a navigation) so the
+      // URL can be copied to share — it resolves to the standalone /log page.
+      function setLogPath(slug: string | null) {
+        try { history.replaceState(null, '', slug ? '/log/' + slug + '/' : '/'); } catch {}
+      }
+
       function showWritingList() {
+        setLogPath(null);
         writingDetail?.classList.add('fade-out');
         setTimeout(() => {
           writingList?.classList.remove('fade-out');
@@ -434,8 +444,9 @@ const {
         }, FADE_MS);
       }
 
-      function showWritingDetail(date: string, title: string, bodyHTML: string) {
+      function showWritingDetail(date: string, title: string, bodyHTML: string, slug: string | null) {
         if (!writingDetailDate || !writingDetailTitle || !writingDetailDesc) return;
+        setLogPath(slug);
         writingList?.classList.add('fade-out');
         setTimeout(() => {
           writingDetailDate.textContent = date;
@@ -461,6 +472,7 @@ const {
       });
 
       function closeWritingOverlay() {
+        setLogPath(null);
         writingOverlay?.classList.remove('open');
         writingOpen = false;
       }
@@ -484,7 +496,8 @@ const {
           showWritingDetail(
             el.dataset.writingDate || '',
             el.dataset.writingTitle || '',
-            getWritingBodyHTML(idx)
+            getWritingBodyHTML(idx),
+            el.dataset.writingSlug || null
           );
         });
       });
@@ -497,6 +510,7 @@ const {
           if (!writingOverlay || !writingDetailDate || !writingDetailTitle || !writingDetailDesc) return;
           const idx = el.dataset.writingIdx || '0';
           const sourceItem = document.querySelector(`.writing-list-item[data-writing-idx="${idx}"]`) as HTMLElement | null;
+          setLogPath(el.dataset.writingSlug || sourceItem?.dataset.writingSlug || null);
           writingDetailDate.textContent = sourceItem?.dataset.writingDate || '';
           writingDetailTitle.textContent = sourceItem?.dataset.writingTitle || '';
           writingDetailDesc.innerHTML = getWritingBodyHTML(idx);

@@ -1,0 +1,42 @@
+---
+// Minimal shell for standalone /log pages — a focused reading surface with
+// per-entry share metadata (the home Layout carries the whole arcade chrome).
+interface Props {
+  title: string;
+  description?: string;
+  ogType?: 'website' | 'article';
+}
+const {
+  title,
+  description = 'Writing by Patrick Branigan.',
+  ogType = 'article',
+} = Astro.props;
+
+// Canonical absolute URL for this page (requires `site` in astro.config).
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  @import '../styles/global.css';
+</style>
