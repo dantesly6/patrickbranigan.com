@@ -12,6 +12,7 @@
   --bg-hover: #2d2821;
   --text: #ece8e1;
   --text-mid: #a09a90;
+  --text-body: #c2bdb4;
   --text-dim: #5a5650;
   --green: #4ade80;
   --green-glow: rgba(74, 222, 128, 0.2);
@@ -1293,6 +1294,12 @@ a:hover { color: var(--green); }
 .writing-body-inline {
   max-width: 72ch;
   line-height: 1.85;
+}
+
+.writing-overlay-detail #writing-detail-desc p,
+.writing-body-inline p,
+.writing-body-inline li {
+  color: var(--text-body);
 }
 
 .writing-body-inline a {
