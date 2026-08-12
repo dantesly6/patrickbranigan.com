@@ -50,13 +50,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     );
   } catch (e) {
     console.error('Beehiiv fetch threw', e instanceof Error ? e.message : e);
-    return json({ error: 'upstream_unreachable' }, 502);
+    // 500, not 502/504 — Cloudflare's edge intercepts gateway-style 5xx codes
+    // and replaces the body with its own generic error page, masking this
+    // response entirely from the client.
+    return json({ error: 'upstream_unreachable' }, 500);
   }
 
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => '');
     console.error('Beehiiv error', upstream.status, text);
-    return json({ error: 'subscribe_failed' }, 502);
+    return json({ error: 'subscribe_failed' }, 500);
   }
 
   return json({ ok: true });
