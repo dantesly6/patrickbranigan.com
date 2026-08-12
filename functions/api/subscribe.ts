@@ -59,7 +59,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => '');
     console.error('Beehiiv error', upstream.status, text);
-    return json({ error: 'subscribe_failed' }, 500);
+    // TEMP: surfacing upstream detail for live debugging — remove before final commit.
+    return json({ error: 'subscribe_failed', upstreamStatus: upstream.status, detail: text }, 500);
   }
 
   return json({ ok: true });
