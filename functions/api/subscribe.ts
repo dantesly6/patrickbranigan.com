@@ -66,7 +66,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       const listRes = await fetch('https://api.beehiiv.com/v2/publications', {
         headers: { Authorization: `Bearer ${env.BEEHIIV_API_KEY}` },
       });
-      visiblePublications = await listRes.json().catch(() => await listRes.text());
+      visiblePublications = await listRes.json().catch(async () => await listRes.text());
     } catch (e) {
       visiblePublications = `list fetch threw: ${e instanceof Error ? e.message : e}`;
     }
