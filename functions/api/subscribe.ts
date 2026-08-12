@@ -28,22 +28,30 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return json({ error: 'server_misconfigured' }, 500);
   }
 
-  const upstream = await fetch(
-    `https://api.beehiiv.com/v2/publications/${env.BEEHIIV_PUBLICATION_ID}/subscriptions`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.BEEHIIV_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        reactivate_existing: true,
-        send_welcome_email: true,
-        utm_source: 'patrickbranigan.com',
-      }),
-    }
-  );
+  const publicationId = env.BEEHIIV_PUBLICATION_ID.trim();
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(
+      `https://api.beehiiv.com/v2/publications/${publicationId}/subscriptions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${env.BEEHIIV_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          reactivate_existing: true,
+          send_welcome_email: true,
+          utm_source: 'patrickbranigan.com',
+        }),
+      }
+    );
+  } catch (e) {
+    console.error('Beehiiv fetch threw', e instanceof Error ? e.message : e);
+    return json({ error: 'upstream_unreachable' }, 502);
+  }
 
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => '');
