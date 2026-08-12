@@ -59,8 +59,21 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => '');
     console.error('Beehiiv error', upstream.status, text);
-    // TEMP: surfacing upstream detail for live debugging — remove before final commit.
-    return json({ error: 'subscribe_failed', upstreamStatus: upstream.status, detail: text }, 500);
+    // TEMP: also list what publications this API key CAN see, to confirm
+    // whether it's an account/workspace mismatch — remove before final commit.
+    let visiblePublications: unknown = null;
+    try {
+      const listRes = await fetch('https://api.beehiiv.com/v2/publications', {
+        headers: { Authorization: `Bearer ${env.BEEHIIV_API_KEY}` },
+      });
+      visiblePublications = await listRes.json().catch(() => await listRes.text());
+    } catch (e) {
+      visiblePublications = `list fetch threw: ${e instanceof Error ? e.message : e}`;
+    }
+    return json(
+      { error: 'subscribe_failed', upstreamStatus: upstream.status, detail: text, visiblePublications },
+      500
+    );
   }
 
   return json({ ok: true });
