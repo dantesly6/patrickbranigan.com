@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Patrick Branigan — prototype</title>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #0b0b0d;
+    --ink: #f2f0ec;
+    --dim: rgba(242,240,236,.42);
+    --faint: rgba(242,240,236,.16);
+    --line: rgba(242,240,236,.09);
+    --accent: #b8f0c8;
+    --sans: 'General Sans', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --ease: cubic-bezier(.2,.8,.2,1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--ink); overflow: hidden; }
+  body { font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+  #field { position: fixed; inset: 0; width: 100%; height: 100%; }
+
+  /* ---------- chrome ---------- */
+  .top {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 28px 32px; pointer-events: none;
+  }
+  .id h1 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .id p { font-size: 13px; color: var(--dim); margin-top: 2px; }
+  .telemetry { font-family: var(--mono); font-size: 11px; color: var(--dim); text-align: right; line-height: 1.8; }
+  .telemetry b { color: var(--ink); font-weight: 500; }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: 1px; box-shadow: 0 0 10px var(--accent); animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .35; } }
+
+  /* ---------- stage ---------- */
+  .stage { position: fixed; inset: 0; z-index: 2; display: grid; place-items: center; padding: 120px 32px 150px; }
+  .stream { position: absolute; inset: 120px 32px 150px; display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity .6s var(--ease), transform .6s var(--ease); transform: translateY(12px); }
+  .stream.on { opacity: 1; pointer-events: auto; transform: none; }
+
+  .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+
+  /* now */
+  .now-card { max-width: 820px; width: 100%; }
+  .now-card .big { font-size: clamp(34px, 5.6vw, 76px); font-weight: 500; letter-spacing: -.035em; line-height: 1.02; margin-top: 18px; }
+  .now-card .big em { font-style: normal; color: var(--dim); }
+  .now-card .sub { font-size: 16px; color: var(--dim); margin-top: 18px; max-width: 520px; line-height: 1.5; }
+  .swap { animation: swapIn .7s var(--ease); }
+  @keyframes swapIn { from { opacity: 0; transform: translateY(14px); filter: blur(6px); } }
+
+  /* thinking */
+  .read { max-width: 760px; width: 100%; }
+  .read h2 { font-size: 15px; font-weight: 500; margin-top: 10px; color: var(--dim); }
+  .lines { margin-top: 28px; display: flex; flex-direction: column; gap: 14px; }
+  .lines { --fit: 1; max-height: 100%; overflow: hidden; -webkit-mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent); }
+  .lines p { font-size: calc(clamp(22px, 2.9vw, 38px) * var(--fit)); font-weight: 500; letter-spacing: -.02em; line-height: 1.22; transition: color .8s var(--ease), opacity .8s var(--ease); }
+  .lines p.past { color: var(--faint); font-size: calc(clamp(22px, 2.9vw, 38px) * .6); }
+  .lines p.cur { color: var(--ink); }
+  .lines p.next { color: var(--faint); opacity: .5; font-size: calc(clamp(22px, 2.9vw, 38px) * .6); }
+
+  /* built */
+  .built { width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 300px; gap: 40px; align-items: center; max-width: 1240px; }
+  .frame { position: relative; height: 100%; min-height: 0; overflow: hidden; border-radius: 6px; }
+  .frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 1s var(--ease); will-change: transform; }
+  .meta .proj { font-size: 34px; font-weight: 500; letter-spacing: -.03em; margin-top: 12px; line-height: 1.05; }
+  .meta .role { font-size: 13px; color: var(--dim); margin-top: 8px; }
+  .meta .sum { font-size: 15px; line-height: 1.5; margin-top: 18px; color: rgba(242,240,236,.75); }
+  .meta .count { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 22px; }
+
+  /* playing */
+  .play { width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 300px; gap: 40px; align-items: center; max-width: 1240px; }
+  .gamebox { position: relative; height: 100%; min-height: 0; }
+  .play canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 6px; cursor: pointer; }
+  .shelf { display: flex; flex-direction: column; gap: 18px; margin-top: 18px; }
+  .shelf div { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+  .shelf span { font-size: 15px; }
+  .shelf small { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .shelf i { font-style: normal; font-family: var(--mono); font-size: 13px; }
+  .hint { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 22px; line-height: 1.7; }
+
+  /* ---------- dock ---------- */
+  .dock {
+    position: fixed; z-index: 6; left: 50%; bottom: 30px; transform: translateX(-50%);
+    display: flex; gap: 4px; padding: 6px;
+    background: rgba(20,20,22,.55); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border: 1px solid var(--line); border-radius: 14px;
+  }
+  .dock button { position: relative; padding: 10px 16px 13px; border-radius: 9px; font-size: 13px; color: var(--dim); min-width: 92px; text-align: left; transition: color .3s, background .3s; }
+  .dock button:hover { color: var(--ink); }
+  .dock button.on { color: var(--ink); background: rgba(242,240,236,.07); }
+  .dock .bar { position: absolute; left: 16px; right: 16px; bottom: 6px; height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .dock .bar i { position: absolute; inset: 0; transform-origin: left; background: var(--dim); }
+  .dock button.on .bar i { background: var(--accent); }
+  .open {
+    position: fixed; z-index: 6; right: 32px; bottom: 36px;
+    font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
+    transition: color .3s, border-color .3s;
+  }
+  .open:hover { color: var(--ink); border-color: var(--faint); }
+  .legend { position: fixed; z-index: 4; left: 32px; bottom: 36px; font-family: var(--mono); font-size: 11px; color: var(--dim); line-height: 1.7; max-width: 300px; pointer-events: none; }
+
+  /* ---------- sheet (picked up) ---------- */
+  .sheet { position: fixed; inset: 0; z-index: 20; display: flex; justify-content: center; overflow-y: auto; background: rgba(11,11,13,.72); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); opacity: 0; pointer-events: none; transition: opacity .45s var(--ease); }
+  .sheet.on { opacity: 1; pointer-events: auto; }
+  .sheet article { width: 100%; max-width: 680px; padding: 120px 24px 160px; transform: translateY(30px); transition: transform .6s var(--ease); }
+  .sheet.on article { transform: none; }
+  .sheet h2 { font-size: clamp(34px, 5vw, 56px); font-weight: 500; letter-spacing: -.035em; line-height: 1.04; margin-top: 14px; }
+  .sheet .date { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 14px; }
+  .sheet .body { margin-top: 40px; font-size: 19px; line-height: 1.65; color: rgba(242,240,236,.86); }
+  .sheet .body p + p { margin-top: 1.1em; }
+  .sheet .body img { width: 100%; margin-top: 28px; border-radius: 6px; display: block; }
+  .sheet .close { position: fixed; top: 24px; right: 28px; font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: rgba(11,11,13,.6); }
+
+  @media (max-width: 760px) {
+    .top { padding: 20px 16px; }
+    .telemetry .opt { display: none; }
+    .stage, .stream { inset: 96px 16px 128px; padding: 0; }
+    .built, .play { grid-template-columns: 1fr; grid-template-rows: 1fr auto; gap: 20px; }
+    .meta .proj { font-size: 26px; }
+    .meta .sum, .hint, .shelf { display: none; }
+    .dock { bottom: max(16px, env(safe-area-inset-bottom)); left: 16px; right: 16px; transform: none; }
+    .dock button { min-width: 0; flex: 1; padding: 10px 8px 13px; text-align: center; }
+    .dock .bar { left: 10px; right: 10px; }
+    .open { bottom: auto; top: 64px; right: 16px; }
+    .legend { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stream, .swap, .lines p, .frame img { transition: none; animation: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="field"></canvas>
+
+<header class="top">
+  <div class="id">
+    <h1>Patrick Branigan</h1>
+    <p>Designs, builds, writes, plays.</p>
+  </div>
+  <div class="telemetry">
+    <div><span class="dot"></span><b id="clock">--:--</b> <span id="daypart"></span></div>
+    <div class="opt">last shipped <b id="shipped"></b></div>
+    <div class="opt">playing <b id="playingNow"></b></div>
+  </div>
+</header>
+
+<main class="stage">
+  <section class="stream" data-s="now"><div class="now-card" id="nowCard"></div></section>
+
+  <section class="stream" data-s="thinking">
+    <div class="read">
+      <div class="kicker" id="readKicker"></div>
+      <h2 id="readTitle"></h2>
+      <div class="lines" id="lines"></div>
+    </div>
+  </section>
+
+  <section class="stream" data-s="built">
+    <div class="built">
+      <div class="frame" id="frame"><img id="imgA" alt=""><img id="imgB" alt=""></div>
+      <div class="meta">
+        <div class="kicker" id="builtKicker"></div>
+        <div class="proj" id="builtProj"></div>
+        <div class="role" id="builtRole"></div>
+        <div class="sum" id="builtSum"></div>
+        <div class="count" id="builtCount"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stream" data-s="playing">
+    <div class="play">
+      <div class="gamebox"><canvas id="game"></canvas></div>
+      <div class="meta">
+        <div class="kicker">In rotation</div>
+        <div class="shelf" id="shelf"></div>
+        <div class="hint" id="gameHint">Running itself.<br>Tap or press space to take over.</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="legend" id="legend"></div>
+<nav class="dock" id="dock"></nav>
+<button class="open" id="openBtn">Open ↵</button>
+
+<div class="sheet" id="sheet"><button class="close" id="closeBtn">Close esc</button><article id="sheetBody"></article></div>
+
+<script>
+/* ============================================================
+   DATA — writing is injected from src/content/writing at build.
+   Everything else mirrors index.astro.
+   ============================================================ */
+const WRITING = [{"slug":"first-entry","title":"Hello World","date":"2026-05-04","excerpt":"Output is now easy. Input is what's next.","body":"It's been well over a month since I last opened Figma to actually create something. I've handled every single piece of work at hand with Claude Code. That's not to say everything has worked out well. Sometimes the experience has been less efficient. Sometimes the process has been bloated. Sometimes the output has been dead wrong. But one thing is true: regardless, it's made output faster. That's what people and businesses want. They want everything, faster. It's the output that everyone is fixated on. But the only real reason I've been faster is because I have an interest and a comfort with learning and executing inside a terminal.  \n\n\nOutput is now easy. Input is where the world will focus next. \n\n\nRoughly half a billion people per day intentionally interface with AI tools. 5%-10% of those people are on the supply side (building, deploying or directly supporting AI products). There's an immense amount of adoption and scale still to be done. However, as we've seen with the tumultuous history of VR for example, adoption is directly correlated with customer convenience and confidence (in the product and in the price).\n\n\nThe customer needs to be confident they can do (whatever it is they want to do) and comfortable doing (whatever it is they're doing). I'm not so certain we've cracked this yet. AI products and services seem to be falling into two camps: pushed down your throat through your existing products and services without your permission via quiet integration, or soft and hard gated behind sign ups, paywalls, and other data collection layers up front.\n\n\nThe former makes customers uncomfortable. The latter makes customers lack confidence.\n\n\nThe next swell of AI innovation might just be how we interface with our AI, or rather how our AI begins more naturally interfacing with us. It will become less about what can AI do for me, and more about how comfortable and confident does AI make me feel in whatever I'm doing."},{"slug":"output-is-cheap","title":"Output is cheap. The cost is the consequence.","date":"2026-05-11","excerpt":"AI might generate the code. But AI doesn't own the consequence of the code.","body":"There's been a fuck ton of content written about how much and how fast code can be produced by AI. Lines per hour. PRs per day. Features per week. Hell, I was sitting in a pub just this month when I ran into the father of Jesse Pickard – founder and CEO of The Mind Company – and the first thing he mentions when learning about my line of work is \"my son was telling me companies out where he is are laying people off if they haven't spent enough tokens and output enough code.\"\n\nIt's absurd how much conversation lives on that side of the ledger.\n\nThere's another side, and I haven't heard a lick about it in comparison.\n\nAI might generate the code. But AI doesn't own the consequence of the code.\n\nThe model doesn't get paged at 2AM, refund customers, or sit in a postmortem. It doesn't look a team in the eye on a Monday. When something goes wrong (which it will, pretty often), the consequence lands on a human, whether it be a reviewer, maintainer, orchestrator, or whoever made the call to ship.\n\nThis asymmetry was easy to overlook when generated code was a novelty. But the more code gets produced, the more consequence accumulates somewhere – and that somewhere is likely to be a human.\n\nThis changes what's important to measure when building something. It used to be (still is) enough to ask how much someone (or some model) could produce. The more intriguing question is going to become how much can someone take ownership for? How many decisions can they stand behind? How much of the consequence are they willing to carry? How heavy of a time are they willing to endure?"},{"slug":"back-to-doing-work","title":"Back to (Doing) Work","date":"2026-06-02","excerpt":"Going IC is the power move.","body":"Historically, the career ladder pointed in one direction: away from work and into hot, high tower seats. Proof is in witnessing friends and family sacrifice values for titles. Proof is in the engagement motivations on platforms like LinkedIn. You would do your thing well enough that you \"earned\" the right to stop doing it. Then, you'd manage the people who do it. Then, you'd manage the people who manage them. Sadly, the further you drifted from the actual work the larger the reward.\n\nI admit it. I was following suit for some time myself. I designed, then had people design, then had people who tell people how and what to design. And I found it a pretty shitty experience. Not just because I was moving away from the work, but because I was moving away from the relationships built with other people through our shared work. \n\nNow, it seems, people are beginning to invite this reversal – intentionally drifting back towards actually doing the work. We have AI to thank for this.\n\nWhen output is cheap, coordination isn't what's scarce. It's judgement, and the willingness to own what gets shipped. A manager three layers removed from the work can't exercise. They can approve, they can deflect, they can reorganize, but all of these things are the easiest maths for AI to own, AND these managers can't actually stand behind a decision they didn't make, on work they didn't touch, in a system they will eventually no longer understand. \n\nThe person who can is the one sitting in the terminal. They're close enough to the work to know what's true. They're close enough to carry the consequence when it goes wrong. These are the positions that used to be at the bottom of the ladder, but now they're becoming the top of the leverage that's emerging.\n\nI joined my current company (Workweek) as a Founding Designer, not to sit in a terminal and code, but to envision, map, concept, design and make tangible the journeys and systems that empower thought leaders to curate communities and distribute their voices. The most useful I've been in the last year has been sitting in the terminal – breaking shit, shipping things, eating consequences and learning from them. My decisions immediately have impact. My decisions immediately validate ideas. My decisions immediately inspire and motivate others.\n\nAnd I'm not the only one. My CEO spent two sleepless weeks doing what one might consider 50% of my job. My job isn't to interview, analyze and walk in the shoes of the power user. Instead I let the power user build the thing. My job is to now ensure it makes most sense. Ensure it abides by the bounds of fundamental principles of design. Ensure that thing builds trust, shows empathy, and empowers other users. Most excitingly, my job is also much more about injecting delight and magic. \n\nI'm an IC. My CEO is an IC. Our head of engineering is an IC. Our sales are ICs. \n\nGoing IC isn't a step down. When everyone can produce, the people who can produce *and* own what they produce *and* continuously enhance what they produce are the rare ones. That's not a fall back. That's a power move. And it's never been more possible than right now."},{"slug":"the-bare-minimum","title":"The Bare Minimum","date":"2026-06-17","excerpt":"What's left of a dying man is the exact list of things a machine will never have.","body":"I went to see my grandfather recently. He's definitely in the final phase of the final portion of his time here on Earth. It was quite the experience – very emotional as you might imagine. I hadn't seen him in about a year, which has been the regular cadence for the last few years.\n\nI have a large family between my mother's and father's sides. I've seen family nearing the end before, especially more recently. But I'm not sure I'd ever seen a person reduced all the way down. I mean nearly ALL. THE. WAY. DOWN. To the degree I'm surprised they're living. We spend our lives padded in a bubble of forethought, worry, and the constant seeking of satisfaction — by what we can do, what we make, what we produce, etc. None of that is left for my grandfather. He can very barely move. He can speak maybe a mumble. We're not even sure he can see at this point. Bedridden, needing full attention. The floor of a human being. The bare minimum.\n\nMy mom did warn me that 'grandpa isn't what you remember.' I assured her I expected to be confronted with a shell of the person I have seared in my memory. But when I did finally see him, it shook me more than I expected. I'm good at hiding emotions (for better or worse). And I was mentally prepared. So I was \"fine\" in comparison to others. But, yeah...damn. It was something to see and experience. Partly because I never see humans in this state. And partly because of what was still there.\n\nThree things, as far as I could tell, were still fully his. He was breathing. His heart was still beating on its own. And — the one I keep coming back to — every so often, he could still make sense of nonsense. Take fragments that don't connect and reach for the thread between them, to our surprise. He knew it was his birthday, even just for a few seconds, because he could see a balloon with candles on it attached to his bed and motioned to blow air at them. His eyes would briefly widen when he surely recognized me by voice, before slipping into his next hallucination. He still mouthed ice cream, even if just one scoop, even if just momentarily (and that's literally all he can \"eat\"). Reduced this far, he was still running. He was still very clearly a human.\n\nI spend my days next to machines that are beginning to out-produce me by a mile. Sitting in the room with my grandfather, it occurred to me that the only things still flickering in him are the exact things none of these machines have (well, I suppose you could argue except for \"hallucinations\"). A model doesn't breathe. Nothing inside it decides, on its own, to keep going. And for everything it can pattern-match, it can't do the thing my grandfather still does without trying — make meaning where there plainly is none.\n\nRight now we are in a time where we keep measuring ourselves against what AI can produce. My grandfather, even in the state he's in, makes me believe that the parts of us worth anything are the parts that keep going when there's nothing left to produce at all. A breath. A beating heart. A willingness, even if fleeting, when there's nothing left."},{"slug":"a-narrow-way-through","title":"A Narrow Way Through","date":"2026-07-14","excerpt":"The day's work I threw away is the only reason the one prompt worked.","body":"In the words of Paul Atreides in Dune: Part Two, \"There is a narrow way through.\"\n\nThis has become my mantra — working multiple lines of thought, across multiple bodies of work, all at once. More questions than answers at any given moment. And I'm reframing those questions in ways I wasn't six months ago.\n\nOne particular circumstance struck me this week. I was instructed to take on a UX challenge. I spent a day doing so – working out thoughts, with Claude, and exercising my design thinking. I arrived at a set of possible solutions. Then, naturally I went to document them, only to find other solutions had already been considered and specified. The challenge then was I was instructed to execute on the specifications. What had I just done a day's worth of work for then?\n\nIt's in these moments where the experienced designer and the inexperienced designer differ. Years ago, I might have battled this. Years ago I might have said, \"no, we should do it this way and here's my evidence.\" I might have said, \"here are the many reasons the specified way doesn't work the way it's imagined.\" But today, I simply said:\n\n\"Given the limitations this specified path surfaces, flex the design. Keep the principles that made the prospective flow intuitive, met accessibility, and solved four distinct UX problems — but flex to hit the goal and layer those back in.\"\n\nYears ago, I'd have expected a hard \"no\" or a \"that's going to be this amount of work\" to achieve the prospective solution(s). But today, the power move is, flex the solution so that it meets the constraints, AND THEN layer in the ingredients that make the prospective solution novel, intuitive, and/or magical.\n\nTwo perspectives are made happy. One solution serves both. One prompt materialized it.\n\nAnd the day I thought I'd wasted? That was the whole point. I couldn't have written that prompt without it. The solutions I threw away are the reason I knew which principles to protect. The output was disposable. The thinking that produced it wasn't.\n\nIt is in the small moments and narrow paths of design thinking where the interesting work is now happening. Not in the output or the outcome."},{"slug":"doing-whats-hard-on-purpose","title":"Doing What's Hard On Purpose","date":"2026-07-28","excerpt":"Exploding miniatures are worth more now than ever before.","body":"Like so many others, I went to see Christopher Nolan's The Odyssey recently. I loved it, but mostly because I love monster movies and I believe this was actually a monster movie. The thing with monster movies is they're perfect cases for pushing technology to achieve look, feel, expression that is often unrealistic. So one might think, this was the perfect opportunity to leverage AI.\n\nOf course, Nolan didn't. (I mean he probably did, but didn't rely entirely on it)\n\nHis work is a case study in intentional constraint. He leans on practical effects, camera tricks, physical sets, etc. not because he has to but because those limitations are, I bet he'd say, what shape the creative outcome. His decision to not simulate everything becomes a statement about taste and authorship — and about what \"real\" feels like on a screen now.\n\nAt Workweek – the company I am a part of – we cherish and empower professionals who live real workplace and industry experiences, and their voices that those experiences have shaped. We believe the raw creator is of great value. And people clearly agree based on our communities' platforms. \n\nFilmmakers like Nolan who publicly commit to physical craft, real performances, and clearly human decision-making become more valuable, not less. The news, sales, and seats are proving it. People will pay to see something they know was actually created – visioned – by a human: actors genuinely acting, a miniature genuinely exploding, a 70mm frame that captures actual light bouncing off actual objects.\n\nThe Odyssey is enormous in so many ways. But most of all it's an incredibly distinct and powerful proposal that we don't absolutely need AI to achieve what we humans consider greatness (yet). If you strip filmmaking down to simply \"convincing moving images that hold attention,\" then sure, AI will end up taking the cake. But if you see filmmaking as \"a particular human mind wrestling with reality, using images and sound,\" then Nolan is an argument that this kind of authorship still matters. Probably the most profound argument of this year, oddly enough."},{"slug":"the-roles-have-shifted","title":"The Roles Have Shifted","date":"2026-08-10","excerpt":"And your role is no longer you","body":"About 6 months ago, our company made the conscious decision to give ourselves the time and space to experiment with a new operating model. One that was built on a few bets and beliefs. Among those was the hypothesis that with the advance of AI, just about anyone will be able to build anything, eventually. We took two weeks, which turned into four weeks, which turned into...well, the present...to try it out. Here's how it looked at the start:\n\nYou have an idea. You enter a repo. Your idea is automatically validated or invalidated against KPIs based on the discussion and evidence surrounding the idea. You build it out locally with guidance. You commit. It's reviewed. It ships. It gets measured. It stays or is killed.\n\nSounds easy enough. But the challenge was, *anyone* can do it. Our sales, marketing, product, design, engineering folks...you name any role and they had the opportunity to build and ship. As you can imagine, there was a fuck ton of guardrails put into place, which I had a major hand in. But even those are beginning to loosen tremendously in time.\n\nWe called this user/persona: the builder. \n\nOver the course of the 6 months since its inception, we've found ourselves organically falling into \"roles\" that are less articulated, and more enveloping. More orchestral in nature. We're not individually working because we're 'here to do a specific thing' any longer. Hell, I joined Workweek as a Founding Product Designer because of my craft and my deep knowledge in Figma and design systems. That knowledge has proven to be highly valuable, but the actual tactical work? Nothing like what I was doing last year. As my CEO tweeted out recently, I haven't used Figma to do really anything in over 2 months. \n\nAnd that's the way forward. Here's how us humans have sifted out into the model. There are the following:\n\nBuilders: Those with an idea who build them out tangibly to the degree they're killed or shipped. They connect dots innovate and/or iterate on existing or new features or product ideas while ensuring they're serving a business goal both before and after hitting production.\n\nMachinists: Those who are deeply engaged with maintaining, scaling and evolving the model by which we work. They are the ones who are continuously building to enhance the very experience of building while ensuring low risk to the builders and the product(s) themselves.\n\nPolishers: Those who are keenly involved in ensuring what's being shipped has as few rough edges and fail points as possible. Not to be dismissed as simply \"cleaning up someone else's work,\" they're truly the ones who work to capture the essence of the idea through the moments and touchpoints that make or break a user's impression and relationship with the product.\n\nThe best part is any one individual is very likely in more than one of these camps. I've found myself in all three even at one time. This is not to say I'm working more or doing multiple jobs. That would be comparing what I'm doing to a legacy format of work motivated by role definition. \n\nI'm just *making* things work and *making* things happen. And sometimes, they don't work out! But most of the time, that's entirely okay. It's a faster, more robust, more contextually saturated way of operating, but it's where I (we) find ourselves today.\n\nThere's a lot of sauce behind the scenes that I won't cover in this single entry. But all this is to say, thinking about my work as \"designing\" and my role as a \"designer,\" I believe, is fast becoming antiquated. \n\nI'm just lucky enough to be someone who can sit with a swirl of ambiguity around the byline of their name and not freak the fuck out :)"},{"slug":"steve-was-right","title":"Steve was right","date":"2026-08-13","excerpt":"We're all just beginners again","body":"A statement Steve Jobs made at his commencement address at Stanford:  \n  \n\"The lightness of being a beginner again, less sure about everything...freed me to enter one of the most creative periods of my life.\"  \n  \nToday many of us are finding ourselves in this exact circumstance. A beginner of sorts. Confronted with the unknown. Even if we can't see ourselves in the position, we are snugly between an era of old and an era of new when it comes to product, design and engineering. No one's going to tell you to \"be a beginner.\" That's on you.  \n  \nThere have been more days in the past six months where I've thought, \"I have no idea what the fuck I'm doing.\" The truth is, it's okay.  \n  \nI've never felt more like a beginner again :)"},{"slug":"the-tool-isnt-the-bottleneck","title":"The tool isn't the bottleneck","date":"2026-08-25","excerpt":"The tool gets better once you do","body":"Over the past three to six months I've been asked a lot, by designers, engineers, product and business people alike, \"how do I become a better builder?\" My answer has changed as my own experience with building has evolved. Where I've landed most recently:\n\nGive yourself some time to actually understand the fundamentals your concept calls for.\n\nNearly everyone who's asked me this is really asking a narrower question, motivated by a specific tool: \"how do I use [insert tool] to [output] better representations of what's in my head?\"\n\nBut if you give yourself a little time to deepen your understanding of the facets required to actualize what's in your head, your relationship with that tool grows on its own. Take it upon yourself to even slightly better understand the law of proximity, scale, and typography fundamentals, and the UI your tool outputs will get better by default, because you can now have a richer conversation with it.\n\nTools change. Workflows evolve. Fundamentals, historically, have not.\n\nThat's a design-specific example, but it holds for any facet. It's helped me. I believe it'll help you too."},{"slug":"the-weight-in-the-room","title":"The weight in the room","date":"2026-09-01","excerpt":"AI isn't a tool problem anymore. It's a people problem.","body":"Last week I spent a full day in a room with my company's design and engineering teams. We ARE the product team, with the addition of our CEO, at this point. (CEO wasn't there)\n\nWe sat around the same table and simply let loose whatever was on our minds. For the first time it became clear to me just how much weight AI is quietly putting on people. Also, shockingly, I spoke less than 10 statements the entire time. I was engulfed with thought while listening to everyone's perspectives.\n\nAt one point, one individual let go of something they'd clearly been sitting on for a very long time. It wasn't a complaint exactly, but more like pressure finding an exit. When they finished...they didn't look up. They just stared down at the table. For minutes. Nobody rushed to fill the void. And when they did, this person was still lost in a trance. As if having been to war and back. \n\nI've read plenty about AI anxiety in the abstract and I've most definitely felt it myself. Job security, relevance, pace, volume, and in this case process. All of it. Watching it explode from someone specific in the same room is a different thing than battling your own head. This is, of course, because we all handle it differently. But I had no idea just how differently, among a small team like ours.\n\nHere's what I believe: AI is dramatically changing our industries, our workflows, our creative processes, and most importantly causing us to battle with our own identities as professionals and craftsman. I believe all this to be true. And I believe I'm pretty well positioned to battle it all in my head. I have been, and successfully so far.\n\nHere's what I don't have: a tidy answer for anyone other than myself at the moment. I don't think this gets solved with a better rollout plan, or a roadmap, or a re-assuring all-hands. The stare wasn't rhetorical. It was someone processing something very heavy in real time.\n\nOne thing I've come to pride myself on in my career is helping other designers, engineers and product-minded individuals in times of indecision or despair. I do usually take a minute or two, or an hour or two, just to process before delivering what may or may not end up being helpful. However, I'm always fairly confident in what I deliver.\n\nBut this...\n\nThis was something different. It was on another personal, emotional level for this individual. For this team. And I'm just not sure, even still, if what I delivered to the folks around me was helpful or sensible.\n\nI believe we'll get there. But I believe it's going to hurt some more still first..."},{"slug":"mistaking-a-prototype-for-a-solution","title":"Mistaking a prototype for a solution","date":"2026-09-23","excerpt":"Sometimes AI enables articulation","body":"I recently saw a post on LinkedIn that struck me. Here's an excerpt from it:\n\n--\n\n> *\"Designer gets handed a vibe-coded prototype.*\n>\n> *This is what we want to build! So when can we start?*\n>\n> *Rookie mistake:*\n>\n> *Designer takes prototype and starts refining. They identify what doesn't match the design system, and polish the UI until it does. The final output looks flawless. But when launched, the solution barely moves the needle*\n>\n> *The better approach:*\n>\n> *The designer ignores the prototype. (If they're sent a prototype link, they don't open it). Designer goes back to first principles and asks: \"What's the goal we're trying to achieve?\" Based on the answer and evidence presented, designer then decides if the prototype is worth looking at or not.\"*\n\n--\n\nI respectfully disagree with this for one main reason: they're looking at the vibe-coded prototype as a solution because of its visual fidelity, when they should be looking at it as merely a visualization of someone else's thoughts articulated. \n\nWhat I've experienced in this AI world as a designer, with builders all around me, is the ability for thinkers to finally articulate what they once couldn't, in a format that's more universally digestible. \n\nTo not open a prototype merely because of its form factor and fidelity is doing yourself a disservice, in that you're not inviting another lens on the challenge. The best work comes from a myriad of professional thought aligning behind a goal. When the founder, engineer, PM, or other contributor brings to you a high fidelity prototype with AI, they're saying, \"This is what I mean!\" Your job as a designer is to take that into consideration. It may not be the *right* answer but it may do a world better in distributing to you what the goal is in their mind. The prototype is a piece of the evidence. \n\nTo not look at a non-design and/or engineer prototype would be dismissing potential evidence."},{"slug":"personal-reminder","title":"Personal Reminder","date":"2026-10-06","excerpt":"Inspired by Rick Rubin.","body":"Don't listen to what anyone else tells you.\n\nBe true to yourself.\n\nWork hard.\n\nNever give up.\n\nDon't quit.\n\nJust keep going.\n\nDon't put undue pressure on your art.\n\nRemember: a great artist walks around in wonder – in awe of the world."}];
+const TZ = 'America/New_York'; // Patrick's timezone — drives the day/night field
+const LAST_SHIPPED = '2026-10-06T12:00:00-04:00'; // would come from latest commit / deploy
+
+const PROJECTS = [
+  { project: 'Workweek', role: 'Founding Product Designer', era: 'Now',
+    summary: 'A custom tooling and AI system anyone can build and ship products and features from.',
+    desc: "I'm currently leading design ops for Workweek – a B2B media company. I built and maintain Workweek's design system, as well as co-own and maintain our Builder Stack: an internal workflow leveraging tools and technologies that enable anyone in Workweek to start with an idea and end with a deployed, measurable realization of their idea in record time.",
+    images: ['workweek/01-shape.webp','workweek/02-strategy.webp','workweek/03-lifecycle.webp','workweek/04-real-run.webp'] },
+  { project: 'Chaotic Game Engine', role: 'Head of Product Design', era: 'Archive',
+    summary: 'A browser-based AAA game engine that was adopted by 3 studios in 12 months.',
+    desc: 'Game engines are bloated, expensive, and inaccessible to much of the world. I designed a browser-based engine editor from zero – interface architecture, visual editing and debugging, real-time spatial collaboration, instant deploy to browser, and more. Users shipped playable builds 25% faster, at AAA fidelity. It grew Chaotic from 0 to 3 studio partners in 12 months.',
+    images: ['chaotic/viewport.webp','chaotic/vfx.webp','chaotic/content-module.webp','chaotic/comments.webp'] },
+  { project: 'Moonfallen', role: 'Lead Designer – Game, UI & Level', era: 'Archive',
+    summary: 'A browser-based stealth FPS that secured studio adoption of Chaotic Engine.',
+    desc: "I led design on Chaotic Games' debut title – a browser-based stealth FPS on the moon, built to prove the Chaotic Engine could deliver console-fidelity gameplay in a browser. I owned level, HUD, and UI: whiteboxing and nav-mesh iteration to shape the spaces, and a minimalist UI of geometric primitives.",
+    images: ['moonfallen/gameplay.webp','moonfallen/character.webp','moonfallen/whiteboxing-1.webp','moonfallen/whiteboxing-2.webp','moonfallen/ui.webp'] },
+  { project: 'Ribbon Cash', role: 'Staff Product Designer', era: 'Archive',
+    summary: 'A cash offer app that helped grow revenue to $38M and led to acquisition.',
+    desc: 'Making cash offers on homes was slow, manual, and painful for everyone involved. I designed the Ribbon Cash mobile app end-to-end. Revenue grew 7x to $38M in 12 months, leading to an acquisition by EasyKnock.',
+    images: ['ribbon/hub-home.webp','ribbon/cashapp.webp','ribbon/ui-elements.webp'] },
+];
+const GAMES = [
+  { title: 'Pokemon Pokopia', platform: 'Switch', rating: 9 },
+  { title: 'Battlefield 6', platform: 'PC', rating: 7 },
+  { title: 'Yoshi and the Mysterious Book', platform: 'Switch', rating: 6 },
+];
+
+/* ============================================================
+   SHARED CLOCK — every stream is a loop on one clock, so all
+   visitors land mid-flow at the same moment. No server.
+   ============================================================ */
+const EPOCH = Date.UTC(2026, 0, 1);
+const nowSec = () => (Date.now() - EPOCH) / 1000;
+function locate(segs) {
+  const total = segs.reduce((a, s) => a + s.dur, 0);
+  let t = nowSec() % total;
+  for (let i = 0; i < segs.length; i++) {
+    if (t < segs[i].dur) return { i, seg: segs[i], p: t / segs[i].dur, total };
+    t -= segs[i].dur;
+  }
+  return { i: 0, seg: segs[0], p: 0, total };
+}
+
+const strip = s => s.replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+  .replace(/^#+\s*/gm, '').replace(/^>\s?/gm, '').replace(/[*_`]/g, '').trim();
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const ago = d => {
+  const days = Math.floor((Date.now() - new Date(d)) / 864e5);
+  if (days < 1) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 14) return days + ' days ago';
+  if (days < 60) return Math.round(days / 7) + ' weeks ago';
+  return Math.round(days / 30) + ' months ago';
+};
+const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+/* newest pieces air more often — the loop favors what's fresh */
+const entries = [...WRITING].sort((a, b) => b.date.localeCompare(a.date));
+const thinkSegs = [];
+entries.forEach((e, idx) => {
+  const lines = strip(e.body).split(/\n+|(?<=[.!?])\s+(?=[A-Z"“])/).map(s => s.trim()).filter(Boolean);
+  const words = lines.join(' ').split(/\s+/).length;
+  thinkSegs.push({ e, lines, dur: Math.max(24, words / 3.2) });
+});
+// freshest two air twice per loop
+thinkSegs.splice(Math.floor(thinkSegs.length / 2), 0, thinkSegs[0], thinkSegs[1]);
+
+const builtSegs = PROJECTS.flatMap(p => p.images.map((img, k) => ({ p, img: '/images/projects/' + img, k, dur: 8 })));
+
+/* ============================================================
+   TIME OF DAY + ENERGY — the field is Patrick's signal
+   ============================================================ */
+function localHour() {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date());
+  const h = +parts.find(p => p.type === 'hour').value, m = +parts.find(p => p.type === 'minute').value;
+  return h + m / 60;
+}
+function daypart(h) {
+  if (h < 5 || h >= 22) return { name: 'late night', hue: [124, 136, 255] };
+  if (h < 9) return { name: 'morning', hue: [255, 186, 110] };
+  if (h < 17) return { name: 'daytime', hue: [184, 240, 200] };
+  return { name: 'evening', hue: [255, 128, 110] };
+}
+const daysSinceShip = (Date.now() - new Date(LAST_SHIPPED)) / 864e5;
+const energy = Math.max(.35, Math.min(1, 1.05 - daysSinceShip * .025));
+
+/* ============================================================
+   VISITOR MEMORY — responds to *you*, needs nobody else
+   ============================================================ */
+let lastVisit = null;
+try {
+  lastVisit = localStorage.getItem('pb-last-visit');
+  localStorage.setItem('pb-last-visit', new Date().toISOString());
+} catch (e) {}
+if (new URLSearchParams(location.search).has('returning')) lastVisit = '2026-09-20T00:00:00Z';
+
+/* ============================================================
+   NOW stream — telemetry as cards
+   ============================================================ */
+function nowCards() {
+  const latest = entries[0];
+  const cards = [];
+  if (lastVisit) {
+    const fresh = entries.filter(e => new Date(e.date) > new Date(lastVisit)).length;
+    cards.push({ k: 'Welcome back', big: `Last here ${ago(lastVisit)}.<br><em>${fresh ? fresh + ' new ' + (fresh > 1 ? 'entries' : 'entry') + ' since.' : 'Nothing new yet. Soon.'}</em>`, sub: '' });
+  }
+  const h = localHour();
+  const time = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' }).format(new Date());
+  cards.push({ k: 'Right now', big: `It's ${time} here.<br><em>${h < 6 || h >= 23 ? 'Probably asleep.' : h < 9 ? 'Coffee, then pixels.' : h < 18 ? 'Heads down at Workweek.' : 'Building something for fun.'}</em>`, sub: '' });
+  cards.push({ k: 'Last thought', big: `${esc(latest.title)}<br><em>${ago(latest.date)}</em>`, sub: esc(latest.excerpt), open: { type: 'entry', e: latest } });
+  cards.push({ k: 'Building', big: `Builder Stack<br><em>at Workweek</em>`, sub: 'Anyone at Workweek goes from idea to deployed, measurable feature. No clone, no commands.', open: { type: 'project', p: PROJECTS[0] } });
+  cards.push({ k: 'Playing', big: `${GAMES[0].title}<br><em>${GAMES[0].rating}/10 so far</em>`, sub: '' });
+  cards.push({ k: 'Logged', big: `${entries.length} entries<br><em>since ${fmtDate(entries[entries.length - 1].date).replace(/ \d+,/, '')}</em>`, sub: '' });
+  return cards.map(c => ({ ...c, dur: 7 }));
+}
+let nowSegs = nowCards();
+
+/* ============================================================
+   RENDER LOOP
+   ============================================================ */
+const STREAMS = [
+  { id: 'now', label: 'Now', segs: () => nowSegs },
+  { id: 'thinking', label: 'Thinking', segs: () => thinkSegs },
+  { id: 'built', label: 'Built', segs: () => builtSegs },
+  { id: 'playing', label: 'Playing', segs: () => [{ dur: 45 }] },
+];
+let active = 'now';
+try { active = sessionStorage.getItem('pb-stream') || 'now'; } catch (e) {}
+if (['now','thinking','built','playing'].includes(location.hash.slice(1))) active = location.hash.slice(1);
+const dock = document.getElementById('dock');
+STREAMS.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.dataset.s = s.id;
+  b.innerHTML = `${s.label}<span class="bar"><i></i></span>`;
+  b.onclick = () => tune(s.id);
+  dock.appendChild(b);
+});
+function tune(id) {
+  active = id;
+  try { sessionStorage.setItem('pb-stream', id); } catch (e) {}
+  history.replaceState(null, '', '#' + id);
+  document.querySelectorAll('.stream').forEach(el => el.classList.toggle('on', el.dataset.s === id));
+  dock.querySelectorAll('button').forEach(el => el.classList.toggle('on', el.dataset.s === id));
+  last = {};
+}
+
+let last = {};
+let current = null; // what "Open" picks up
+function frame() {
+  // dock progress bars — every stream keeps running even when you're not watching it
+  STREAMS.forEach((s, i) => {
+    const L = locate(s.segs());
+    dock.children[i].querySelector('i').style.transform = `scaleX(${L.p})`;
+  });
+
+  if (active === 'now') {
+    const L = locate(nowSegs);
+    if (last.now !== L.i) {
+      last.now = L.i;
+      const c = L.seg;
+      document.getElementById('nowCard').innerHTML = `<div class="swap"><div class="kicker">${c.k}</div><div class="big">${c.big}</div>${c.sub ? `<div class="sub">${c.sub}</div>` : ''}</div>`;
+    }
+    current = L.seg.open || null;
+  }
+
+  if (active === 'thinking') {
+    const L = locate(thinkSegs);
+    const { e, lines } = L.seg;
+    // weight progress by line length so long sentences hold longer
+    const lens = lines.map(l => l.split(/\s+/).length + 3);
+    const tot = lens.reduce((a, b) => a + b, 0);
+    let acc = 0, cur = 0;
+    for (let i = 0; i < lens.length; i++) { acc += lens[i]; if (L.p * tot < acc) { cur = i; break; } cur = i; }
+    const key = L.i + ':' + cur;
+    if (last.think !== key) {
+      const newEntry = !last.think || last.think.split(':')[0] !== String(L.i);
+      last.think = key;
+      document.getElementById('readKicker').textContent = `Thinking · ${fmtDate(e.date)}`;
+      document.getElementById('readTitle').textContent = e.title;
+      const win = [];
+      const box = document.getElementById('lines');
+      for (let j = cur - 1; j <= cur + 1; j++) if (j >= 0 && j < lines.length) win.push(`<p class="${j < cur ? 'past' : j === cur ? 'cur' : 'next'}">${esc(lines[j])}</p>`);
+      box.style.setProperty('--fit', Math.max(.55, Math.min(1, 140 / lines[cur].length)));
+      box.innerHTML = win.join('');
+      if (newEntry) { box.classList.remove('swap'); void box.offsetWidth; box.classList.add('swap'); }
+    }
+    current = { type: 'entry', e };
+  }
+
+  if (active === 'built') {
+    const L = locate(builtSegs);
+    const s = L.seg;
+    if (last.built !== L.i) {
+      last.built = L.i;
+      const a = document.getElementById('imgA'), b = document.getElementById('imgB');
+      const [show, hide] = a.style.opacity === '1' ? [b, a] : [a, b];
+      show.src = s.img; show.style.opacity = 1; hide.style.opacity = 0;
+      show.dataset.k = L.i;
+      document.getElementById('builtKicker').textContent = s.p.era === 'Now' ? 'Building now' : 'From the archive';
+      document.getElementById('builtProj').textContent = s.p.project;
+      document.getElementById('builtRole').textContent = s.p.role;
+      document.getElementById('builtSum').textContent = s.p.summary;
+      document.getElementById('builtCount').textContent = `${String(s.k + 1).padStart(2, '0')} / ${String(s.p.images.length).padStart(2, '0')}`;
+    }
+    // slow drift, direction alternates per image
+    const img = [document.getElementById('imgA'), document.getElementById('imgB')].find(x => x.style.opacity === '1');
+    if (img) { const dir = L.i % 2 ? 1 : -1; img.style.transform = `scale(${1 + L.p * .06}) translateX(${dir * L.p * 1.2}%)`; }
+    current = { type: 'project', p: s.p };
+  }
+
+  if (active === 'playing') current = null;
+
+  requestAnimationFrame(frame);
+}
+
+/* ============================================================
+   SHEET — pick something up and take it at your own pace
+   ============================================================ */
+const sheet = document.getElementById('sheet'), sheetBody = document.getElementById('sheetBody');
+function openSheet() {
+  if (active === 'playing') { game.takeOver(); return; }
+  if (!current) return;
+  if (current.type === 'entry') {
+    const e = current.e;
+    const paras = strip(e.body).split(/\n\s*\n/).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
+    sheetBody.innerHTML = `<div class="kicker">Thinking</div><h2>${esc(e.title)}</h2><div class="date">${fmtDate(e.date)} · /log/${e.slug}</div><div class="body">${paras}</div>`;
+  } else if (current.type === 'project') {
+    const p = current.p;
+    sheetBody.innerHTML = `<div class="kicker">${p.era === 'Now' ? 'Building now' : 'From the archive'}</div><h2>${esc(p.project)}</h2><div class="date">${esc(p.role)}</div><div class="body"><p>${esc(p.desc)}</p>${p.images.map(i => `<img src="/images/projects/${i}" alt="" loading="lazy">`).join('')}</div>`;
+  }
+  sheet.scrollTop = 0;
+  sheet.classList.add('on');
+}
+const closeSheet = () => sheet.classList.remove('on');
+document.getElementById('openBtn').onclick = openSheet;
+document.getElementById('closeBtn').onclick = closeSheet;
+sheet.addEventListener('click', e => { if (e.target === sheet) closeSheet(); });
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') return closeSheet();
+  if (sheet.classList.contains('on')) return;
+  if (e.key === 'Enter') return openSheet();
+  const n = +e.key; if (n >= 1 && n <= STREAMS.length) tune(STREAMS[n - 1].id);
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    const i = STREAMS.findIndex(s => s.id === active);
+    tune(STREAMS[(i + (e.key === 'ArrowRight' ? 1 : STREAMS.length - 1)) % STREAMS.length].id);
+  }
+});
+// swipe between streams on touch
+let tx = null;
+addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+addEventListener('touchend', e => {
+  if (tx === null || sheet.classList.contains('on')) return;
+  const dx = e.changedTouches[0].clientX - tx; tx = null;
+  if (Math.abs(dx) < 60 || active === 'playing') return;
+  const i = STREAMS.findIndex(s => s.id === active);
+  tune(STREAMS[(i + (dx < 0 ? 1 : STREAMS.length - 1)) % STREAMS.length].id);
+});
+
+/* ============================================================
+   BACKGROUNDS — press B to cycle. Each is redrawn clean every
+   frame (no trail residue).
+   sky:  the actual sky where Patrick is, right now
+   year: every day of 2026; lit = shipped, ringed = wrote
+   none: plain
+   ============================================================ */
+const field = document.getElementById('field'), fx = field.getContext('2d');
+let W, H, stars = [];
+const moonCanvas = document.createElement('canvas');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const BGS = ['sky', 'year', 'none'];
+let bg = 'sky';
+try { bg = localStorage.getItem('pb-bg') || 'sky'; } catch (e) {}
+if (BGS.includes(new URLSearchParams(location.search).get('bg'))) bg = new URLSearchParams(location.search).get('bg');
+const COMMITS = {"2026-04-10":1,"2026-04-13":1,"2026-04-15":1,"2026-04-17":1,"2026-04-21":1,"2026-04-23":2,"2026-04-25":2,"2026-04-29":1,"2026-05-01":1,"2026-05-05":9,"2026-05-06":3,"2026-05-11":2,"2026-06-02":1,"2026-06-22":3,"2026-06-24":1,"2026-07-14":1,"2026-07-28":1,"2026-08-10":2,"2026-08-11":6,"2026-08-12":7,"2026-08-13":1,"2026-08-25":1,"2026-09-01":1,"2026-09-23":1,"2026-10-06":1};
+const WROTE = new Set(WRITING.map(e => e.date));
+
+function resize() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  field.width = W * dpr; field.height = H * dpr; fx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  stars = Array.from({ length: Math.round(W * H / 6000) }, () => ({ x: Math.random() * W, y: Math.random() * H * .75, r: Math.random() * 1.1 + .2, ph: Math.random() * 6.28 }));
+}
+
+/* sky keyframes: [hour, top, horizon] — kept dark so type stays legible */
+const SKY = [
+  [0, [5, 6, 12], [13, 16, 32]],
+  [5, [7, 8, 20], [26, 22, 48]],
+  [6.5, [18, 20, 40], [92, 48, 44]],
+  [8, [15, 26, 38], [52, 66, 74]],
+  [12, [14, 29, 40], [40, 72, 84]],
+  [17, [16, 24, 42], [64, 48, 66]],
+  [19, [13, 14, 30], [104, 48, 40]],
+  [21, [7, 8, 26], [24, 22, 44]],
+  [24, [5, 6, 12], [13, 16, 32]],
+];
+const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+function skyAt(h) {
+  for (let i = 0; i < SKY.length - 1; i++) {
+    const [h0, t0, b0] = SKY[i], [h1, t1, b1] = SKY[i + 1];
+    if (h >= h0 && h <= h1) { const t = (h - h0) / (h1 - h0); return [mix(t0, t1, t), mix(b0, b1, t)]; }
+  }
+  return [SKY[0][1], SKY[0][2]];
+}
+const rgb = c => `rgb(${c.join(',')})`;
+
+function drawSky(t) {
+  const h = localHour();
+  const [top, hor] = skyAt(h);
+  const g = fx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, rgb(top)); g.addColorStop(.62, rgb(mix(top, hor, .45))); g.addColorStop(1, rgb(hor));
+  fx.fillStyle = g; fx.fillRect(0, 0, W, H);
+  // darkness 0..1 drives stars
+  const dark = h < 5 || h > 21 ? 1 : h < 7 ? (7 - h) / 2 : h > 19 ? (h - 19) / 2 : 0;
+  if (dark > 0) for (const s of stars) {
+    fx.globalAlpha = dark * (.35 + .35 * Math.sin(t * .8 + s.ph));
+    fx.fillStyle = '#f2f0ec'; fx.beginPath(); fx.arc(s.x, s.y, s.r, 0, 6.283); fx.fill();
+  }
+  fx.globalAlpha = 1;
+  // sun 6→20h, moon 20→6h, each on an arc across the sky
+  const isSun = h >= 6 && h < 20;
+  const p = isSun ? (h - 6) / 14 : ((h + 24 - 20) % 24) / 10;
+  const x = W * (.08 + p * .84), y = H * (.86 - Math.sin(p * Math.PI) * .62);
+  const r = Math.min(W, H) * (isSun ? .035 : .026);
+  const glow = fx.createRadialGradient(x, y, 0, x, y, r * 9);
+  const gc = isSun ? [255, 196, 140] : [190, 200, 255];
+  glow.addColorStop(0, `rgba(${gc},.22)`); glow.addColorStop(1, `rgba(${gc},0)`);
+  fx.fillStyle = glow; fx.fillRect(x - r * 9, y - r * 9, r * 18, r * 18);
+  if (isSun) {
+    fx.fillStyle = 'rgba(255,214,170,.9)'; fx.beginPath(); fx.arc(x, y, r, 0, 6.283); fx.fill();
+  } else { // crescent: cut a disc out of the moon offscreen, then stamp it
+    const m = moonCanvas, mx = m.getContext('2d'), size = Math.ceil(r * 2 + 4);
+    if (m.width !== size) { m.width = m.height = size; }
+    mx.clearRect(0, 0, size, size);
+    mx.globalCompositeOperation = 'source-over'; mx.fillStyle = 'rgba(226,230,255,.88)';
+    mx.beginPath(); mx.arc(size / 2, size / 2, r, 0, 6.283); mx.fill();
+    mx.globalCompositeOperation = 'destination-out';
+    mx.beginPath(); mx.arc(size / 2 + r * .45, size / 2 - r * .2, r * .92, 0, 6.283); mx.fill();
+    fx.drawImage(m, x - size / 2, y - size / 2);
+  }
+}
+
+function drawYear(t) {
+  fx.fillStyle = '#0b0b0d'; fx.fillRect(0, 0, W, H);
+  const start = Date.UTC(2026, 0, 1), days = 365;
+  const todayIdx = Math.floor((Date.now() - start) / 864e5);
+  // fit 365 dots into the viewport as a grid of weeks (columns) x 7 (rows), repeated in bands
+  const cols = Math.ceil(Math.sqrt(days * W / H)), rows = Math.ceil(days / cols);
+  const cw = W / (cols + 1), ch = H / (rows + 1), base = Math.min(cw, ch) * .09;
+  for (let i = 0; i < days; i++) {
+    const cx = cw * (1 + (i % cols)), cy = ch * (1 + Math.floor(i / cols));
+    const d = new Date(start + i * 864e5).toISOString().slice(0, 10);
+    const c = COMMITS[d] || 0;
+    if (i > todayIdx) { fx.fillStyle = 'rgba(242,240,236,.04)'; fx.beginPath(); fx.arc(cx, cy, base, 0, 6.283); fx.fill(); continue; }
+    if (i === todayIdx) {
+      const pulse = .5 + .5 * Math.sin(t * 2.4);
+      fx.fillStyle = `rgba(${hue},${.5 + pulse * .5})`;
+      fx.beginPath(); fx.arc(cx, cy, base * (1.6 + pulse * .8), 0, 6.283); fx.fill();
+      continue;
+    }
+    if (c) {
+      fx.fillStyle = `rgba(${hue},${Math.min(.6, .2 + c * .06)})`;
+      fx.beginPath(); fx.arc(cx, cy, base * (1.3 + Math.min(c, 9) * .14), 0, 6.283); fx.fill();
+    } else {
+      fx.fillStyle = 'rgba(242,240,236,.11)'; fx.beginPath(); fx.arc(cx, cy, base, 0, 6.283); fx.fill();
+    }
+    if (WROTE.has(d)) {
+      fx.strokeStyle = 'rgba(242,240,236,.3)'; fx.lineWidth = 1;
+      fx.beginPath(); fx.arc(cx, cy, base * 3.4, 0, 6.283); fx.stroke();
+    }
+  }
+}
+
+let hue = daypart(localHour()).hue;
+let lastDraw = 0;
+function drawField(ts) {
+  // 30fps is plenty for a background
+  if (ts - lastDraw > 33) {
+    lastDraw = ts;
+    const t = ts / 1000;
+    if (bg === 'sky') drawSky(t);
+    else if (bg === 'year') drawYear(t);
+    else { fx.fillStyle = '#0b0b0d'; fx.fillRect(0, 0, W, H); }
+  }
+  if (!reduced) requestAnimationFrame(drawField);
+}
+function legendText() {
+  const dp = daypart(localHour());
+  const shipped = Object.keys(COMMITS).length;
+  return bg === 'sky' ? `The sky where I am, right now.<br>${dp.name}.`
+    : bg === 'year' ? `Every dot is a day of 2026.<br>Lit: I shipped (${shipped} days). Ringed: I wrote.<br>Pulsing: today.`
+    : '';
+}
+addEventListener('keydown', e => {
+  if ((e.key === 'b' || e.key === 'B') && !sheet.classList.contains('on')) {
+    bg = BGS[(BGS.indexOf(bg) + 1) % BGS.length];
+    try { localStorage.setItem('pb-bg', bg); } catch (e) {}
+    document.getElementById('legend').innerHTML = legendText() + '<br><span style="opacity:.6">B to change background</span>';
+    if (reduced) drawField(performance.now() + 1000);
+  }
+});
+
+/* ============================================================
+   PLAYING — attract mode: the game plays itself until you take over
+   ============================================================ */
+const game = (() => {
+  const c = document.getElementById('game'), g = c.getContext('2d');
+  let w, h, y, vy, gates, score, best = 0, mode = 'attract', deadAt = 0, dist = 0;
+  try { best = +localStorage.getItem('pb-best') || 0; } catch (e) {}
+  const GAP = () => h * .3, SPACING = () => Math.max(220, w * .36);
+  function size() {
+    const r = c.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+    w = r.width; h = r.height; c.width = w * dpr; c.height = h * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function reset() {
+    y = h / 2; vy = 0; score = 0; dist = 0;
+    gates = []; for (let i = 0; i < 4; i++) gates.push({ x: w * .7 + i * SPACING(), gy: h * (.3 + Math.random() * .4), passed: false });
+  }
+  function flap() { vy = -h * .0115; }
+  function takeOver() {
+    if (mode !== 'player') { mode = 'player'; reset(); hint(); }
+    flap();
+  }
+  function hint() {
+    document.getElementById('gameHint').innerHTML = mode === 'player'
+      ? `You've got it. Score <b>${score}</b> · best <b>${best}</b>`
+      : `Running itself.<br>Tap or press space to take over.${best ? `<br>Your best: ${best}` : ''}`;
+  }
+  c.addEventListener('pointerdown', takeOver);
+  addEventListener('keydown', e => { if (e.code === 'Space' && active === 'playing') { e.preventDefault(); takeOver(); } });
+  const accent = () => `rgb(${hue.join(',')})`;
+  function step() {
+    if (active === 'playing' && w) {
+      const speed = w * .0042, X = w * .22;
+      if (mode === 'dead') {
+        if (performance.now() - deadAt > 1600) { mode = 'attract'; reset(); hint(); }
+      } else {
+        vy += h * .0006; y += vy; dist += speed;
+        gates.forEach(gt => { gt.x -= speed; });
+        if (gates[0].x < -40) { const lastG = gates[gates.length - 1]; gates.shift(); gates.push({ x: lastG.x + SPACING(), gy: h * (.3 + Math.random() * .4), passed: false }); }
+        const next = gates.find(gt => gt.x + 20 > X);
+        if (mode === 'attract' && next && y > next.gy + GAP() * .12 && vy > -1) flap();
+        gates.forEach(gt => {
+          if (!gt.passed && gt.x + 20 < X) { gt.passed = true; score++; if (mode === 'player') { if (score > best) { best = score; try { localStorage.setItem('pb-best', best); } catch (e) {} } hint(); } }
+          const inX = X > gt.x - 20 && X < gt.x + 20, inGap = Math.abs(y - gt.gy) < GAP() / 2 - 8;
+          if (mode === 'player' && inX && !inGap) { mode = 'dead'; deadAt = performance.now(); }
+        });
+        if (y > h - 8 || y < 8) { if (mode === 'player') { mode = 'dead'; deadAt = performance.now(); } else { y = Math.min(Math.max(y, 8), h - 8); vy = 0; } }
+      }
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = 'rgba(242,240,236,.03)'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = 'rgba(242,240,236,.22)'; g.lineWidth = 1.5;
+      gates.forEach(gt => {
+        g.beginPath(); g.moveTo(gt.x, 0); g.lineTo(gt.x, gt.gy - GAP() / 2); g.moveTo(gt.x, gt.gy + GAP() / 2); g.lineTo(gt.x, h); g.stroke();
+        g.fillStyle = 'rgba(242,240,236,.5)';
+        g.fillRect(gt.x - 4, gt.gy - GAP() / 2 - 1, 8, 2); g.fillRect(gt.x - 4, gt.gy + GAP() / 2 - 1, 8, 2);
+      });
+      g.fillStyle = mode === 'dead' ? 'rgba(242,240,236,.4)' : accent();
+      g.shadowColor = accent(); g.shadowBlur = mode === 'dead' ? 0 : 18;
+      g.beginPath(); g.arc(X, y, 7, 0, Math.PI * 2); g.fill(); g.shadowBlur = 0;
+      g.font = '500 11px JetBrains Mono, monospace'; g.fillStyle = 'rgba(242,240,236,.42)';
+      g.fillText(mode === 'attract' ? `AUTOPILOT · ${score}` : mode === 'dead' ? `DOWN AT ${score}` : `YOU · ${score}`, 16, 24);
+    }
+    requestAnimationFrame(step);
+  }
+  addEventListener('resize', () => { size(); reset(); });
+  new ResizeObserver(() => { size(); if (!gates) reset(); }).observe(c);
+  requestAnimationFrame(() => { size(); reset(); hint(); step(); });
+  return { takeOver };
+})();
+
+/* ============================================================
+   TELEMETRY
+   ============================================================ */
+function tick() {
+  const h = localHour(), dp = daypart(h);
+  hue = dp.hue;
+  document.documentElement.style.setProperty('--accent', `rgb(${hue.join(',')})`);
+  document.getElementById('clock').textContent = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' }).format(new Date());
+  document.getElementById('daypart').textContent = dp.name;
+  document.getElementById('shipped').textContent = ago(LAST_SHIPPED);
+  document.getElementById('playingNow').textContent = GAMES[0].title;
+  document.getElementById('legend').innerHTML = legendText() + '<br><span style="opacity:.6">B to change background</span>';
+}
+document.getElementById('shelf').innerHTML = GAMES.map(gm => `<div><span>${esc(gm.title)}<br><small>${gm.platform}</small></span><i>${gm.rating}/10</i></div>`).join('');
+
+resize(); addEventListener('resize', resize);
+tick(); setInterval(tick, 15000);
+setInterval(() => { nowSegs = nowCards(); }, 60000);
+tune(active);
+requestAnimationFrame(frame);
+requestAnimationFrame(drawField);
+</script>
+</body>
+</html>

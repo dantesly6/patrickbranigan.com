@@ -25,3 +25,7 @@ pnpm-debug.log*
 
 # obsidian vault config (local editor only)
 .obsidian/
+
+# redesign prototype: local snapshots and screenshot output
+public/prototypes/_backup/
+redesign/shots/
