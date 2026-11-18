@@ -1,0 +1,508 @@
+---
+// The Wall — a named participation wall for the hero game.
+// Opened in two modes:
+//   browse  — from the bottom-right HUD prompt ("Let's chat, but first let's play")
+//   claim   — automatically after a game run that reached a tier
+//
+// PROTOTYPE: backed by a seeded localStorage mock (see MOCK_WALL below) so the
+// whole flow runs on `astro dev` with no D1 / Beehiiv. Swap addEntry/getWall to
+// hit /api/wall when wiring the real backend.
+---
+
+<div class="wall" id="wall" aria-hidden="true">
+  <button class="wall-close" id="wall-close" aria-label="Close the wall">&times;</button>
+
+  <div class="wall-inner">
+    <!-- ===== Claim (tier reached) ===== -->
+    <div class="wall-claim" id="wall-claim">
+      <p class="wall-kicker mono-xs" id="wall-claim-kicker">YOU MADE THE WALL</p>
+      <p class="wall-time" id="wall-claim-time">0.0s</p>
+      <form class="wall-form" id="wall-form" novalidate>
+        <input class="wall-input" id="wall-name" placeholder="name for the wall" maxlength="24" autocomplete="off" spellcheck="false" />
+        <input class="wall-input" id="wall-email" type="email" placeholder="email — for the writings" autocomplete="email" spellcheck="false" />
+        <button type="submit" class="wall-submit magnetic">Take my spot →</button>
+        <p class="wall-note mono-xs" id="wall-note">subscribe to post · you'll get writing sent only to the wall</p>
+      </form>
+    </div>
+
+    <!-- ===== Nudge (sub-tier death) ===== -->
+    <div class="wall-nudge" id="wall-nudge">
+      <p class="wall-time" id="wall-nudge-time">0.0s</p>
+      <p class="wall-nudge-msg">Not far enough to make the wall.</p>
+      <button class="wall-play magnetic" data-play>Play again →</button>
+    </div>
+
+    <!-- ===== Browse (the list) ===== -->
+    <div class="wall-browse">
+      <header class="wall-head">
+        <h2 class="wall-title">The Wall</h2>
+        <div class="wall-meta mono-xs">
+          <span class="wall-count-label"><span id="wall-count">0</span> players</span>
+          <div class="wall-sort" id="wall-sort">
+            <button data-sort="longest" class="is-active">Longest</button>
+            <span class="wall-sort-sep">/</span>
+            <button data-sort="shortest">Shortest</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="wall-unlock" id="wall-unlock" hidden>
+        <span class="wall-unlock-dot"></span>
+        <span class="wall-unlock-text mono-xs">Your score unlocked a 30-min call with Patrick.</span>
+        <a class="wall-unlock-link link-frame magnetic" id="wall-cal" href="#" target="_blank" rel="noopener">Book it</a>
+      </div>
+
+      <ol class="wall-list" id="wall-list"></ol>
+
+      <button class="wall-play wall-play--browse magnetic" data-play>Play Now →</button>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  .wall {
+    position: fixed;
+    inset: 0;
+    z-index: 60000;
+    background: #0c0a07;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 500ms var(--ease, ease), visibility 500ms var(--ease, ease);
+  }
+  .wall.open { opacity: 1; visibility: visible; }
+
+  .wall-close {
+    position: fixed;
+    top: 20px; right: 26px;
+    z-index: 2;
+    background: none; border: none;
+    color: var(--text-dim);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 300ms ease, transform 300ms ease;
+  }
+  .wall-close:hover { color: var(--green); transform: rotate(90deg); }
+
+  .wall-inner {
+    width: 100%;
+    max-width: 560px;
+    padding: clamp(4rem, 12vh, 9rem) var(--pad, 1.5rem) 6rem;
+  }
+
+  /* Mode visibility — driven by classes on .wall */
+  .wall-claim, .wall-nudge { display: none; }
+  .wall.mode-claim  .wall-claim  { display: flex; }
+  .wall.mode-claim  .wall-browse { display: none; }
+  .wall.mode-nudge  .wall-nudge  { display: flex; }
+  .wall.mode-nudge  .wall-browse { display: none; }
+
+  /* ===== Claim ===== */
+  .wall-claim {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.25rem;
+    animation: wallFade 600ms var(--ease, ease) both;
+  }
+  .wall-kicker {
+    color: var(--green);
+    letter-spacing: 0.22em;
+    text-shadow: 0 0 14px var(--green-glow);
+  }
+  .wall-time {
+    font-family: var(--display, sans-serif);
+    font-size: clamp(3.4rem, 12vw, 5.5rem);
+    line-height: 0.9;
+    color: var(--text, #ece8e1);
+    letter-spacing: 0.01em;
+  }
+  .wall-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 340px;
+    margin-top: 0.5rem;
+  }
+  .wall-input {
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--boundary, #2d2821);
+    padding: 0.7rem 0.2rem;
+    color: var(--text, #ece8e1);
+    font-family: inherit;
+    font-size: 1.05rem;
+    text-align: center;
+    transition: border-color 300ms ease;
+  }
+  .wall-input::placeholder { color: var(--text-dim, #5a5650); }
+  .wall-input:focus { outline: none; border-color: var(--green); }
+  .wall-submit {
+    background: none;
+    border: none;
+    color: var(--text, #ece8e1);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 0.6rem;
+    margin-top: 0.5rem;
+    transition: color 300ms ease, text-shadow 300ms ease;
+  }
+  .wall-submit:hover { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
+  .wall-note { color: var(--text-dim, #5a5650); letter-spacing: 0.04em; line-height: 1.6; }
+  .wall-note.is-error { color: #e06a5a; }
+
+  /* ===== Nudge ===== */
+  .wall-nudge {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    animation: wallFade 600ms var(--ease, ease) both;
+  }
+  .wall-nudge .wall-time { color: var(--text-mid, #a09a90); }
+  .wall-nudge-msg { color: var(--text-dim, #5a5650); font-size: 1rem; }
+  .wall-play {
+    background: none; border: none;
+    color: var(--text, #ece8e1);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 0.6rem 0;
+    margin-top: 0.75rem;
+    transition: color 300ms ease, text-shadow 300ms ease;
+  }
+  .wall-play:hover { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
+
+  /* ===== Browse ===== */
+  .wall-head { margin-bottom: 2.5rem; }
+  .wall-title {
+    font-family: var(--display, sans-serif);
+    font-size: clamp(2.6rem, 8vw, 4rem);
+    font-weight: 400;
+    text-transform: uppercase;
+    color: var(--text, #ece8e1);
+    line-height: 1;
+  }
+  .wall-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1.1rem;
+  }
+  .wall-count-label { color: var(--text-dim, #5a5650); letter-spacing: 0.1em; }
+  .wall-sort { display: flex; align-items: center; gap: 0.6rem; color: var(--text-dim, #5a5650); }
+  .wall-sort button {
+    background: none; border: none;
+    color: var(--text-dim, #5a5650);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 0;
+    transition: color 250ms ease;
+  }
+  .wall-sort button:hover { color: var(--text-mid, #a09a90); }
+  .wall-sort button.is-active { color: var(--green); }
+
+  .wall-unlock {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.75rem;
+    color: var(--text-mid, #a09a90);
+    letter-spacing: 0.06em;
+  }
+  .wall-unlock[hidden] { display: none; }
+  .wall-unlock-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green-glow);
+  }
+  .wall-unlock-link {
+    color: var(--text, #ece8e1);
+    text-decoration: none;
+  }
+
+  .wall-list { list-style: none; }
+  .wall-row {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--boundary, #2d2821);
+    animation: wallRowIn 500ms var(--ease, ease) both;
+  }
+  .wall-rank {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-dim, #5a5650);
+    width: 2.2rem;
+    flex-shrink: 0;
+  }
+  .wall-name {
+    flex: 1;
+    color: var(--text-mid, #a09a90);
+    font-size: 1.05rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .wall-secs {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--text-dim, #5a5650);
+    flex-shrink: 0;
+  }
+  .wall-row.is-mine .wall-name { color: var(--green); text-shadow: 0 0 12px var(--green-glow); }
+  .wall-row.is-mine .wall-rank,
+  .wall-row.is-mine .wall-secs { color: var(--green); }
+
+  .wall-play--browse { display: block; margin: 2.5rem auto 0; }
+
+  @keyframes wallFade { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes wallRowIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+</style>
+
+<script>
+  (() => {
+    // ===== PROTOTYPE MOCK FLAG =========================================
+    // true  → seeded localStorage wall, fake subscribe (no infra needed)
+    // false → (future) POST/GET /api/wall + real Beehiiv subscribe
+    const MOCK_WALL = true;
+    // Stub — replace with your real booking URL (will move to an env var).
+    const CAL_LINK = 'https://cal.com/patrickbranigan';
+    // ===================================================================
+
+    type Entry = { id: string; name: string; seconds: number; ts: number };
+
+    const KEY_ENTRIES = 'wall_entries';
+    const KEY_MINE = 'wall_mine_id';
+
+    const SEED: Entry[] = [
+      { id: 's1',  name: 'kaz',           seconds: 187.4, ts: 1 },
+      { id: 's2',  name: 'mariko',        seconds: 142.0, ts: 2 },
+      { id: 's3',  name: 'devnull',       seconds: 121.8, ts: 3 },
+      { id: 's4',  name: 'Sam R.',        seconds: 98.3,  ts: 4 },
+      { id: 's5',  name: 'pixelwitch',    seconds: 76.5,  ts: 5 },
+      { id: 's6',  name: 'theo',          seconds: 61.2,  ts: 6 },
+      { id: 's7',  name: 'jules',         seconds: 44.9,  ts: 7 },
+      { id: 's8',  name: 'm0th',          seconds: 33.1,  ts: 8 },
+      { id: 's9',  name: 'Priya',         seconds: 27.7,  ts: 9 },
+      { id: 's10', name: 'lowpoly',       seconds: 19.4,  ts: 10 },
+      { id: 's11', name: 'gg_ez',         seconds: 12.6,  ts: 11 },
+      { id: 's12', name: 'first try lol', seconds: 6.8,   ts: 12 },
+    ];
+
+    function load(): Entry[] {
+      try {
+        const raw = localStorage.getItem(KEY_ENTRIES);
+        if (raw) return JSON.parse(raw);
+      } catch {}
+      localStorage.setItem(KEY_ENTRIES, JSON.stringify(SEED));
+      return SEED.slice();
+    }
+    function save(list: Entry[]) {
+      try { localStorage.setItem(KEY_ENTRIES, JSON.stringify(list)); } catch {}
+    }
+    function mineId(): string | null {
+      try { return localStorage.getItem(KEY_MINE); } catch { return null; }
+    }
+
+    // best-run-kept: longer time wins; updates your existing entry in place.
+    function addEntry(name: string, seconds: number): Entry {
+      const list = load();
+      const existingId = mineId();
+      let entry: Entry;
+      const existing = existingId ? list.find(e => e.id === existingId) : null;
+      if (existing) {
+        if (seconds > existing.seconds) existing.seconds = seconds;
+        existing.name = name;
+        existing.ts = (Math.max(...list.map(e => e.ts)) || 0) + 1;
+        entry = existing;
+      } else {
+        entry = { id: 'u' + load().length + '_' + name.length, name, seconds, ts: (Math.max(...list.map(e => e.ts)) || 0) + 1 };
+        list.push(entry);
+        try { localStorage.setItem(KEY_MINE, entry.id); } catch {}
+      }
+      save(list);
+      return entry;
+    }
+
+    // ===== DOM =====
+    const wall = document.getElementById('wall')!;
+    const closeBtn = document.getElementById('wall-close');
+    const listEl = document.getElementById('wall-list')!;
+    const countEl = document.getElementById('wall-count')!;
+    const sortEl = document.getElementById('wall-sort')!;
+    const claimTime = document.getElementById('wall-claim-time')!;
+    const claimKicker = document.getElementById('wall-claim-kicker')!;
+    const nudgeTime = document.getElementById('wall-nudge-time')!;
+    const form = document.getElementById('wall-form') as HTMLFormElement;
+    const nameInput = document.getElementById('wall-name') as HTMLInputElement;
+    const emailInput = document.getElementById('wall-email') as HTMLInputElement;
+    const note = document.getElementById('wall-note')!;
+    const unlock = document.getElementById('wall-unlock')!;
+    const calLink = document.getElementById('wall-cal') as HTMLAnchorElement;
+
+    let currentSort: 'longest' | 'shortest' = 'longest';
+    let pendingSeconds = 0;
+    let pendingTier = 0;
+
+    const fmt = (s: number) => s.toFixed(1) + 's';
+
+    function renderList() {
+      const list = load().slice().sort((a, b) =>
+        currentSort === 'longest' ? b.seconds - a.seconds : a.seconds - b.seconds
+      );
+      const mine = mineId();
+      countEl.textContent = String(list.length);
+      listEl.innerHTML = '';
+      list.forEach((e, i) => {
+        const li = document.createElement('li');
+        li.className = 'wall-row' + (e.id === mine ? ' is-mine' : '');
+        li.style.animationDelay = Math.min(i * 22, 400) + 'ms';
+        li.innerHTML =
+          `<span class="wall-rank">${String(i + 1).padStart(2, '0')}</span>` +
+          `<span class="wall-name"></span>` +
+          `<span class="wall-secs">${fmt(e.seconds)}</span>`;
+        (li.querySelector('.wall-name') as HTMLElement).textContent = e.name;
+        listEl.appendChild(li);
+      });
+    }
+
+    function setMode(mode: 'browse' | 'claim' | 'nudge') {
+      wall.classList.remove('mode-browse', 'mode-claim', 'mode-nudge');
+      wall.classList.add('mode-' + mode);
+    }
+
+    function openWall() {
+      wall.classList.add('open');
+      wall.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeWall() {
+      wall.classList.remove('open');
+      wall.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    function showBrowse(scrollToMine = false) {
+      setMode('browse');
+      renderList();
+      // Reveal the call unlock if this visitor has reached T2.
+      const unlockedCall = pendingTier >= 2 || localStorage.getItem('wall_call_unlocked') === '1';
+      if (unlockedCall) {
+        unlock.hidden = false;
+        calLink.href = CAL_LINK;
+      } else {
+        unlock.hidden = true;
+      }
+      openWall();
+      if (scrollToMine) {
+        requestAnimationFrame(() => {
+          const el = listEl.querySelector('.is-mine') as HTMLElement | null;
+          el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        });
+      }
+    }
+
+    // ===== Claim flow (from a game run) =====
+    function claim(seconds: number, tier: number) {
+      pendingSeconds = seconds;
+      pendingTier = tier;
+      if (tier >= 2) localStorage.setItem('wall_call_unlocked', '1');
+
+      if (tier <= 0) {
+        nudgeTime.textContent = fmt(seconds);
+        setMode('nudge');
+        openWall();
+        return;
+      }
+      claimTime.textContent = fmt(seconds);
+      claimKicker.textContent = tier >= 2 ? 'YOU UNLOCKED A CALL' : 'YOU MADE THE WALL';
+      note.classList.remove('is-error');
+      note.textContent = "subscribe to post · you'll get writing sent only to the wall";
+      setMode('claim');
+      openWall();
+      setTimeout(() => nameInput.focus(), 550);
+    }
+
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+      if (name.length < 2) { fail('add a name for the wall'); return; }
+      if (!EMAIL_RE.test(email)) { fail('that email looks off'); return; }
+
+      if (MOCK_WALL) {
+        // pretend: subscribe to Beehiiv (tagged hero-game-wall) + post name/time
+        addEntry(name, pendingSeconds);
+        showBrowse(true);
+      }
+      // future: await fetch('/api/wall', { method:'POST', body:{ name, email, seconds, score } })
+    });
+
+    function fail(msg: string) {
+      note.classList.add('is-error');
+      note.textContent = msg;
+    }
+
+    // ===== Events =====
+    document.addEventListener('wall:open', () => showBrowse(false));
+    document.addEventListener('wall:claim', (e) => {
+      const d = (e as CustomEvent).detail || {};
+      claim(Number(d.seconds) || 0, Number(d.tier) || 0);
+    });
+
+    // Dev shortcut (prototype): press 0 / 1 / 2 anywhere to simulate a
+    // sub-tier / Tier-1 / Tier-2 result and jump straight to the reward.
+    // Works regardless of whether the intro game ran this visit.
+    if (MOCK_WALL) {
+      document.addEventListener('keydown', (e) => {
+        const tag = (document.activeElement?.tagName || '').toUpperCase();
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if (e.key === '0') claim(5.4, 0);
+        else if (e.key === '1') claim(18.2, 1);
+        else if (e.key === '2') claim(42.7, 2);
+      });
+    }
+
+    // bottom-right HUD prompt (lives in Layout) opens the wall
+    document.getElementById('wall-trigger')?.addEventListener('click', () => showBrowse(false));
+
+    sortEl.querySelectorAll<HTMLButtonElement>('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentSort = (btn.dataset.sort as 'longest' | 'shortest') || 'longest';
+        sortEl.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b === btn));
+        renderList();
+      });
+    });
+
+    // Play Now / Play again → relaunch the intro game
+    wall.querySelectorAll<HTMLElement>('[data-play]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try { sessionStorage.setItem('hg_replay', '1'); } catch {}
+        location.reload();
+      });
+    });
+
+    closeBtn?.addEventListener('click', closeWall);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && wall.classList.contains('open')) closeWall();
+    });
+  })();
+</script>

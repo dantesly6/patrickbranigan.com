@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import HeroGame from '../components/HeroGame.astro';
 import { render } from 'astro:content';
 import { getWritingItems } from '../lib/writing';
 
@@ -130,7 +131,8 @@ const libraryTotals = library.platforms.reduce(
 
 ---
 
-<Layout>
+<Layout heroGame={true}>
+  <HeroGame />
   <main class="page">
 
     <!-- ===== Hero ===== -->

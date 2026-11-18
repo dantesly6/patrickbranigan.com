@@ -1,15 +1,18 @@
 ---
+import Wall from '../components/Wall.astro';
 interface Props {
   title?: string;
   description?: string;
+  heroGame?: boolean;
 }
 const {
   title = 'Patrick Branigan',
   description = 'Designer, maker, gamer. Head of Design at Workweek.',
+  heroGame = false,
 } = Astro.props;
 ---
 
-<html lang="en">
+<html lang="en" class:list={[{ 'hero-game-active': heroGame }]}>
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -44,6 +47,8 @@ const {
     <div class="hud" aria-hidden="true">
       <span class="hud-dot"></span>
       <span id="hud-phrase" class="hud-prompt"></span>
+      <span id="wall-trigger" class="hud-prompt hud-wall" role="button" tabindex="0" aria-label="Open the wall">Let's chat, but first let's play →</span>
+      <span class="hud-dot"></span>
     </div>
 
     <!-- Dialogue overlay -->
@@ -79,6 +84,9 @@ const {
         <img id="lightbox-img" src="" alt="" />
       </div>
     </div>
+
+    <!-- The Wall (hero game) -->
+    <Wall />
 
     <script>
       // ============================

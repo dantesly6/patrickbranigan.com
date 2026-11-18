@@ -840,6 +840,13 @@ a:hover { color: var(--green); }
   text-shadow: 0 0 8px var(--green-glow);
 }
 
+/* Wall trigger — twin of the dialogue prompt, pinned to the right of the bar */
+.hud-wall { margin-left: auto; }
+@media (max-width: 600px) {
+  /* On narrow screens the cycling Q&A wins the row; wall trigger drops out */
+  .hud-wall { display: none; }
+}
+
 /* --- Dialogue overlay --- */
 .dialogue {
   position: fixed;
