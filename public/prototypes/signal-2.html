@@ -1876,7 +1876,7 @@ const room = (() => {
     g.save(); base(); g.font = `500 ${W < 760 ? 14 : 15}px General Sans, system-ui, sans-serif`; g.textAlign = 'center';
     g.fillStyle = rgb(col.ink, .92); g.fillText(txt, W / 2, topSafe + 12); g.restore();
   }
-  const NUM = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
+  const NUM = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
   const Num = n => { const w = NUM[n] || String(n); return w[0].toUpperCase() + w.slice(1); };
   const RACK2 = .16, RROW = 1.06;
   function rackLayout() { // each letter's place in the rack, in name order. Phones: two rows, patrick over branigan
@@ -2679,6 +2679,1278 @@ const room = (() => {
       return o;
     },
   };
+  /* ---- every word a game (round 22). The gags above still play by themselves when the page is idle;
+     spelled by a person, a word opens its game: a start card, then something to do with a goal and an end ---- */
+  const wordOf = list => list.map(L => L.ch).join('');
+  function lineUp(list, S, cx, y) {
+    const em = lineEm(wordOf(list)); let x = cx - em * fs * S / 2;
+    list.forEach((L, i) => { const a = adv(L.ch) * fs * S, nx = list[i + 1]; L.tx = x + a / 2; L.ty = y; L.ts = S; L.ta = 0; x += (adv(L.ch) + (nx ? gap(L.ch, nx.ch) : 0)) * fs * S; });
+    return em * fs * S;
+  }
+  // direct control: the letter is exactly here, with no spring to settle
+  const put = (L, x, y, a = 0) => { L.x = L.tx = x; L.y = L.ty = y; L.a = L.ta = a; L.vx = L.vy = L.va = 0; };
+  const toRack = list => { const R = rackLayout(); list.forEach(L => { L.tx = R[L.i].x; L.ty = R[L.i].y; L.ts = rs; L.ta = 0; }); };
+  const offstage = list => list.forEach(L => { L.ty = H + fs; L.hide = true; });
+  const aOrAn = ch => 'ainr'.includes(ch) ? 'an' : 'a';
+  const easeBack = u => 1 + 2.70158 * Math.pow(u - 1, 3) + 1.70158 * Math.pow(u - 1, 2);
+  const wpaths = new Map();
+  function wpath(S, w) { // an outline at any weight between the two masters
+    let m = wpaths.get(S); if (!m) wpaths.set(S, m = {});
+    const k = w.toFixed(2); if (m[k]) return m[k];
+    const p = new Path2D(), A = S.ra, B = S.rb;
+    S.rings.forEach(([s, e]) => { for (let i = s; i < e; i++) { const x = A[2 * i] + (B[2 * i] - A[2 * i]) * w, y = A[2 * i + 1] + (B[2 * i + 1] - A[2 * i + 1]) * w; if (i === s) p.moveTo(x, y); else p.lineTo(x, y); } p.closePath(); });
+    return m[k] = p;
+  }
+  function glyph(S, x, y, Z, a = 0, sx = 1, w = REST) {
+    const c = Math.cos(a) * Z, s = Math.sin(a) * Z;
+    g.setTransform(DPR * c * sx, DPR * s * sx, -DPR * s, DPR * c, DPR * (x + shakeX), DPR * (y + shakeY)); g.fill(wpath(S, w));
+  }
+  function txt(s, x, y, px, { w = 500, a = .92, align = 'center', color = null } = {}) {
+    base(); g.font = `${w} ${px}px General Sans, system-ui, sans-serif`; g.textAlign = align; g.textBaseline = 'middle'; g.fillStyle = color || rgb(col.ink, a); g.fillText(s, x, y);
+  }
+  function nameRows(S, y) { // the whole name in reading order at scale S; phones put branigan under patrick
+    const out = [], rows = W < 760 ? [[letters.slice(0, 7)], [letters.slice(7)]] : [[letters.slice(0, 7), letters.slice(7)]];
+    rows.forEach((parts, k) => {
+      const em = parts.reduce((a, p) => a + lineEm(wordOf(p)), 0) + (parts.length - 1) * RACKGAP;
+      let x = W / 2 - em * fs * S / 2;
+      parts.forEach(p => { p.forEach((L, i) => { const a = adv(L.ch) * fs * S, nx = p[i + 1]; out[L.i] = { x: x + a / 2, y: y + k * S * fs * 1.12 }; x += (adv(L.ch) + (nx ? gap(L.ch, nx.ch) : 0)) * fs * S; }); x += RACKGAP * fs * S; });
+    });
+    return out;
+  }
+
+  function letterPath(list) { // every letter's outline as one path, for clipping, filling and outlining
+    g.beginPath();
+    list.forEach(L => {
+      T(L.x, L.y, L.a, L.s * fs, L.sx); const S = L.S, w = L.w, A = S.ra, B = S.rb, d = L.dx;
+      S.rings.forEach(([s, e]) => { for (let i = s; i < e; i++) { const j = 2 * i, x = A[j] + (B[j] - A[j]) * w + d[j], y = A[j + 1] + (B[j + 1] - A[j + 1]) * w + d[j + 1]; if (i === s) g.moveTo(x, y); else g.lineTo(x, y); } g.closePath(); });
+    });
+  }
+
+  const GAMES = {
+    rain() {
+      // an umbrella over the whole name: one cloud darts about and keeps growing, the wind gusts, and ten drops soak a letter
+      const phone = W < 760, DUR = 15, SOAK = 10, S = phone ? Math.min(.42, W * .9 / (lineEm('branigan') * fs)) : Math.min(.34, W * .9 / (rackEm() * fs)), Z = S * fs;
+      const y0 = dockTop - (phone ? 76 : 84) - (phone ? Z * 1.12 : 0), spots = nameRows(S, y0);
+      const uw = phone ? W * .38 : Math.min(W * .2, 300), uh = uw * .3, uy = y0 - Z * .82 - (phone ? 18 : 34), I = shape('i').path;
+      const xs = spots.map(p => p.x), xl = Math.min(...xs) - Z * .3, xr = Math.max(...xs) + Z * .3, drops = [], bits = [], wet = new Array(15).fill(0);
+      const C = { x: W / 2 + rand(-1, 1) * uw * .6, v: 0, tx: W / 2, turn: 0, w: uw * .6, a: 0, acc: 0 };
+      let ux = W / 2, done = false, wind = 0, windT = 0, gustAt = rand(4.5, 6), gustEnd = 0;
+      letters.forEach(L => { const p = spots[L.i]; L.tx = p.x; L.ty = p.y; L.ts = S; L.ta = 0; L.k = 300; L.c = 22; });
+      const dry = () => wet.filter(v => v < SOAK).length, cloudY = () => topSafe + 34 + C.w * .3;
+      const o = {
+        dur: Infinity, cursor: 'none', peek: () => ({ ux, uy, uw, dry: dry(), cloud: C.x, cw: C.w, wind, drops: drops.length }),
+        tap() {}, key() {},
+        step(h, t) {
+          if (ptr.on && ptr.x > -1e3) ux += (clamp(ptr.x, uw / 2, W - uw / 2) - ux) * Math.min(1, h * 16);
+          bits.forEach(b => { b.vy += 1400 * h; b.x += b.vx * h; b.y += b.vy * h; b.t += h; }); while (bits.length && bits[0].t > .5) bits.shift();
+          if (done) return;
+          // the cloud grows the whole time, and darts somewhere new every second or so, often to just beside the umbrella
+          C.w = uw * (.6 + Math.pow(Math.min(1, t / DUR), 1.1)); C.a = Math.min(1, C.a + h * 2);
+          const lo = xl + C.w * .4, hi = xr - C.w * .4;
+          if (clock > C.turn || Math.abs(C.tx - C.x) < 6) { C.turn = clock + rand(.45, 1.2); C.tx = clamp(Math.random() < .45 ? ux + (Math.random() < .5 ? -1 : 1) * rand(.55, 1.1) * uw : rand(lo, hi), lo, hi); }
+          const vmax = (phone ? 240 : 360) * (1 + t / 25), want = clamp((C.tx - C.x) * 5, -vmax, vmax);
+          C.v += clamp(want - C.v, -2800 * h, 2800 * h); C.x = clamp(C.x + C.v * h, lo, hi);
+          // now and then a gust, and for a second or two the rain comes in sideways
+          if (t > gustAt) { windT = (Math.random() < .5 ? -1 : 1) * rand(170, 280) * (phone ? .7 : 1); gustEnd = t + rand(1.3, 2); gustAt = t + rand(4.2, 6); }
+          if (t > gustEnd) windT = 0;
+          wind += (windT - wind) * Math.min(1, h * 3);
+          const cy = cloudY(); C.acc += h * (phone ? 16 : 22) * C.a * C.w / (uw * .85);
+          while (C.acc > 1) { C.acc--; drops.push({ x: C.x + rand(-.45, .45) * C.w, y: cy + 10, py: cy + 10, vy: rand(650, 850), s: rand(24, 34) / fs }); }
+          for (const d of drops) {
+            d.py = d.y; d.y += d.vy * h; d.x += wind * h;
+            const u = (d.x - ux) / (uw / 2);
+            if (Math.abs(u) < 1) { const yc = uy - uh * Math.sqrt(1 - u * u); if (d.py <= yc && d.y >= yc) { d.dead = true; bits.push({ x: d.x, y: yc, vx: (u < 0 ? -1 : 1) * rand(60, 200), vy: rand(-220, -80), t: 0 }); continue; } }
+            for (const L of letters) {
+              const z = L.s * fs;
+              if (d.x < L.x + L.S.l * z || d.x > L.x + L.S.r * z || d.y < L.y + L.S.t * z || d.py > L.y + L.S.d * z) continue;
+              d.dead = true; poke(L, d.x, d.y, 0, 1, 1.4);
+              if (wet[L.i] < SOAK && ++wet[L.i] >= SOAK) { L.wT = .06; L.ta = rand(-.14, .14); L.ty += Z * .06; }
+              bits.push({ x: d.x, y: d.y, vx: rand(-80, 80), vy: rand(-160, -60), t: 0 });
+              break;
+            }
+            if (d.y > dockTop + 20) d.dead = true;
+          }
+          for (let i = drops.length - 1; i >= 0; i--) if (drops[i].dead) drops.splice(i, 1);
+          letters.forEach(L => { if (wet[L.i] < SOAK) L.ta = wind * .0004; }); // the dry ones lean into the gust
+          if (t > DUR || !dry()) {
+            done = true; drops.length = 0; const n = dry();
+            letters.forEach(L => { if (wet[L.i] < SOAK) L.ta = 0; });
+            o.say = n === 15 ? `Not a drop. All fifteen dry.${best('rain', n)}` : n ? `${Num(n)} of fifteen stayed dry.${best('rain', n)}` : 'Soaked. Every one.';
+            o.dur = t + 1.4;
+          }
+        },
+        under() {
+          const da = -Math.atan2(wind, 750);
+          g.fillStyle = rgb(col.ink, .8); drops.forEach(d => { T(d.x, d.y, da, d.s * fs); g.fill(I); });
+          if (done) return;
+          base(); const cy = cloudY();
+          g.fillStyle = `rgba(46,58,78,${C.a})`; g.beginPath();
+          [[-.3, .04, .2], [-.05, -.05, .26], [.24, .02, .21], [.02, .1, .22]].forEach(([dx, dy, r]) => { const X = C.x + dx * C.w, Y = cy + dy * C.w; g.moveTo(X + r * C.w, Y); g.arc(X, Y, r * C.w, 0, TAU); });
+          g.fill();
+        },
+        over(t) {
+          letters.forEach(L => { const w = Math.min(1, wet[L.i] / SOAK); if (w > 0) { g.globalAlpha = w * .9; drawLetter(L, '#8fbfee'); g.globalAlpha = 1; } });
+          base(); g.fillStyle = rgb(col.ink, .7);
+          bits.forEach(b => { g.globalAlpha = Math.max(0, 1 - b.t / .5) * .7; g.beginPath(); g.arc(b.x, b.y, 2, 0, TAU); g.fill(); }); g.globalAlpha = 1;
+          g.lineCap = 'round'; g.strokeStyle = inkStr; g.lineWidth = phone ? 3 : 4;
+          g.beginPath(); g.moveTo(ux, uy - uh); g.lineTo(ux, uy + uh * .6); g.arc(ux - uh * .2, uy + uh * .6, uh * .2, 0, Math.PI); g.stroke();
+          g.fillStyle = '#f2c53d'; g.beginPath(); g.moveTo(ux - uw / 2, uy); g.ellipse(ux, uy, uw / 2, uh, 0, Math.PI, TAU);
+          const sw = uw / 4; for (let k = 0; k < 4; k++) g.arc(ux + uw / 2 - sw * (k + .5), uy, sw / 2, 0, Math.PI, true);
+          g.closePath(); g.fill();
+          if (!done) hud(`${dry()} dry · ${Math.max(0, Math.ceil(DUR - t))}`);
+        },
+      };
+      return o;
+    },
+
+    banana(ws, rest) {
+      // the word is a banana. It gets thrown up: slice it between the letters, so every piece holds one letter
+      const phone = W < 760, TOSSES = 3, A = .78, word = 'banana', em = lineEm(word), Lb = phone ? W * .78 : Math.min(W * .56, 820), Zl = Lb * .64 / em, R = Lb / (2 * A), TH = Zl * .5, G = phone ? 620 : 720;
+      const PEEL = '#f2c53d', EDGE = '#c4961c', FLESH = '#fbf0c9', STEM = '#5c4a1c';
+      const P = (f, r = R) => [Math.sin(f) * r, -R + Math.cos(f) * r], tk = f => TH * Math.pow(Math.max(0, Math.cos(f / A * Math.PI / 2)), .55);
+      const lets = []; { let s = -em * Zl / 2; [...word].forEach((ch, i, a) => { const w = adv(ch) * Zl; lets.push({ ch, f: (s + w / 2) / R, hw: w * .26 / R }); s += w + (a[i + 1] ? gap(ch, a[i + 1]) * Zl : 0); }); }
+      const peel = new Path2D(); {
+        const NS = 56; for (let i = 0; i <= NS; i++) { const f = -A + 2 * A * i / NS, [x, y] = P(f, R + tk(f)); i ? peel.lineTo(x, y) : peel.moveTo(x, y); }
+        for (let i = NS; i >= 0; i--) { const f = -A + 2 * A * i / NS, [x, y] = P(f, R - tk(f) * .8); peel.lineTo(x, y); } peel.closePath();
+      }
+      const trail = [], juice = [], pops = [], scores = [];
+      let k = -1, pieces = [], cuts = [], state = 'wait', at = clock, done = false, blade = false, last = null;
+      toRack(rest); offstage(ws);
+      const world = (pc, [x, y]) => { const c = Math.cos(pc.a), s = Math.sin(pc.a), dx = x - pc.q[0], dy = y - pc.q[1]; return [pc.px + c * dx - s * dy, pc.py + s * dx + c * dy]; };
+      const local = (pc, [x, y]) => { const c = Math.cos(pc.a), s = Math.sin(pc.a), dx = x - pc.px, dy = y - pc.py; return [pc.q[0] + c * dx + s * dy, pc.q[1] - s * dx + c * dy]; };
+      const cutIn = (a, b) => cuts.some(f => f > a && f < b);
+      const isClean = j => { const l = lets[j], L0 = lets[j - 1], L1 = lets[j + 1]; return !cutIn(l.f - l.hw, l.f + l.hw) && (!L0 || cutIn(L0.f + L0.hw, l.f - l.hw)) && (!L1 || cutIn(l.f + l.hw, L1.f - L1.hw)); };
+      const nClean = () => lets.filter((_, j) => isClean(j)).length;
+      function toss() {
+        k++; cuts = []; state = 'fly'; at = clock;
+        const x = W * (phone ? rand(.45, .55) : rand(.32, .68)), y = dockTop + TH * 2.2, peak = topSafe + 60 + R * (1 - Math.cos(A)) + TH + rand(0, (dockTop - topSafe) * .1);
+        pieces = [{ f0: -A - .16, f1: A + .06, q: P(0), px: x, py: y, a: rand(-.2, .2), vx: (W / 2 - x) * rand(.2, .45), vy: -Math.sqrt(2 * G * Math.max(60, y - peak)), va: (Math.random() < .5 ? -1 : 1) * [.25, .6, 1][k] * (phone ? .6 : 1) }];
+      }
+      function slice(pc, f) {
+        const i = pieces.indexOf(pc); if (i < 0 || f < pc.f0 + .03 || f > pc.f1 - .03 || f < -A + .03 || f > A - .03) return false;
+        const c = Math.cos(pc.a), s = Math.sin(pc.a), tx = Math.cos(f), ty = -Math.sin(f), wtx = c * tx - s * ty, wty = s * tx + c * ty;
+        const mk = (f0, f1, sd) => {
+          const q = P((f0 + f1) / 2), [wx, wy] = world(pc, q), rx = wx - pc.px, ry = wy - pc.py;
+          return { f0, f1, q, px: wx, py: wy, a: pc.a, vx: pc.vx - pc.va * ry + wtx * sd * 70, vy: pc.vy + pc.va * rx + wty * sd * 70 - 30, va: pc.va - sd * rand(.5, 1.2) };
+        };
+        const before = new Set(lets.map((_, j) => j).filter(isClean));
+        pieces.splice(i, 1, mk(pc.f0, f, -1), mk(f, pc.f1, 1)); cuts.push(f);
+        const [cx2, cy2] = world(pc, P(f)), through = lets.some(l => Math.abs(f - l.f) < l.hw);
+        shake = through ? 5 : 2;
+        for (let n = 0; n < 9; n++) juice.push({ x: cx2, y: cy2, vx: rand(-260, 260), vy: rand(-340, 40), r: rand(2, 4.5), t: 0 });
+        lets.forEach((l, j) => { if (before.has(j) || !isClean(j)) return; const p = pieces.find(q => l.f > q.f0 && l.f < q.f1); if (p) { const [x, y] = world(p, P(l.f, R + tk(l.f) + Zl * .2)); pops.push({ x, y, t: 0, s: '✓' }); } });
+        return true;
+      }
+      function drawPiece(pc) {
+        const c = Math.cos(pc.a), s = Math.sin(pc.a), RB = R + TH * 3;
+        g.save(); g.setTransform(DPR * c, DPR * s, -DPR * s, DPR * c, DPR * (pc.px + shakeX), DPR * (pc.py + shakeY)); g.translate(-pc.q[0], -pc.q[1]);
+        g.beginPath(); g.moveTo(0, -R); for (let n = 0; n <= 16; n++) { const [x, y] = P(pc.f0 + (pc.f1 - pc.f0) * n / 16, RB); g.lineTo(x, y); } g.closePath(); g.clip();
+        g.fillStyle = PEEL; g.fill(peel); g.lineWidth = 2.5; g.lineJoin = 'round'; g.strokeStyle = EDGE; g.stroke(peel);
+        g.lineCap = 'round';
+        if (pc.f0 < -A) { const [x, y] = P(-A + .02), ox = -Math.cos(A), oy = -Math.sin(A); g.strokeStyle = STEM; g.lineWidth = Zl * .1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + ox * Zl * .32, y + oy * Zl * .32); g.stroke(); }
+        if (pc.f1 > A) { const [x, y] = P(A); g.fillStyle = STEM; g.beginPath(); g.arc(x, y, Zl * .05, 0, TAU); g.fill(); }
+        g.strokeStyle = FLESH; g.lineWidth = 9; g.lineCap = 'butt';
+        [pc.f0, pc.f1].forEach(f => { if (f <= -A || f >= A) return; const [x0, y0] = P(f, R - tk(f) * .8), [x1, y1] = P(f, R + tk(f)); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); });
+        g.fillStyle = inkStr;
+        lets.forEach(l => { if (l.f + .3 < pc.f0 || l.f - .3 > pc.f1) return; const [wx, wy] = world(pc, P(l.f)); glyph(shape(l.ch), wx, wy, Zl, pc.a - l.f); });
+        g.restore();
+      }
+      const o = {
+        dur: Infinity, cursor: 'crosshair',
+        peek: () => ({ k, state, scores, clean: nClean(), flying: pieces.map(pc => [pc.px, pc.py]),
+          aims: state !== 'fly' ? [] : lets.slice(1).map((l, j) => { const a = lets[j].f + lets[j].hw, b = l.f - l.hw, f = (a + b) / 2; if (cutIn(a, b)) return null; const pc = pieces.find(p => f > p.f0 && f < p.f1); if (!pc) return null; const [x, y] = world(pc, P(f)), [x2, y2] = world(pc, P(f, R + 1)); return [x, y, x2 - x, y2 - y]; }).filter(Boolean) }),
+        tap(x, y) { blade = true; last = [x, y]; trail.length = 0; },
+        lift() { blade = false; last = null; },
+        key() {},
+        step(h, t) {
+          juice.forEach(j => { j.vy += 1600 * h; j.x += j.vx * h; j.y += j.vy * h; j.t += h; }); while (juice.length && juice[0].t > .8) juice.shift();
+          pops.forEach(p => { p.t += h; }); while (pops.length && pops[0].t > 1) pops.shift();
+          if (blade && ptr.x > -1e3) {
+            const now = [ptr.x, ptr.y]; trail.push([now[0], now[1], clock]);
+            if (last && state === 'fly' && !done && Math.hypot(now[0] - last[0], now[1] - last[1]) / h > 260) {
+              pieces.slice().forEach(pc => {
+                // where the blade crossed the middle line of this piece, if it did
+                const a0 = local(pc, last), b0 = local(pc, now), dx = b0[0] - a0[0], dy = b0[1] - a0[1], mx = a0[0], my = a0[1] + R;
+                const qa = dx * dx + dy * dy, qb = 2 * (mx * dx + my * dy), qc = mx * mx + my * my - R * R, D = qb * qb - 4 * qa * qc;
+                if (D < 0 || qa < 1e-6) return;
+                for (const u of [(-qb - Math.sqrt(D)) / (2 * qa), (-qb + Math.sqrt(D)) / (2 * qa)]) if (u >= 0 && u <= 1 && slice(pc, Math.atan2(mx + dx * u, my + dy * u))) break;
+              });
+            }
+            last = now;
+          }
+          while (trail.length && clock - trail[0][2] > .14) trail.shift();
+          pieces.forEach(pc => { pc.vy += G * h; pc.px += pc.vx * h; pc.py += pc.vy * h; pc.a += pc.va * h; });
+          if (done) return;
+          if (state === 'wait' && clock - at > (k < 0 ? .3 : 1.1)) toss();
+          if (state === 'fly' && clock - at > .5 && pieces.every(pc => pc.vy > 0 && pc.py - R * (pc.f1 - pc.f0) / 2 - TH > dockTop)) {
+            const n = nClean(); scores.push(n); state = 'wait'; at = clock; pieces = [];
+            pops.push({ x: W / 2, y: (topSafe + dockTop) / 2, t: 0, s: n ? `${n} clean` : 'No clean slices', big: true });
+            if (k === TOSSES - 1) {
+              done = true; const tot = scores.reduce((a, b) => a + b, 0);
+              o.say = tot === 18 ? `Eighteen clean slices. Every one.${best('banana2', tot)}` : tot ? `${Num(tot)} clean slices out of eighteen.${best('banana2', tot)}` : 'Not one clean slice.'; o.dur = t + 1.4;
+            }
+          }
+        },
+        over() {
+          pieces.forEach(drawPiece);
+          base(); g.lineCap = g.lineJoin = 'round';
+          for (let i = 1; i < trail.length; i++) { const u = i / trail.length; g.strokeStyle = rgb(col.ink, .85 * u); g.lineWidth = (phone ? 7 : 9) * u; g.beginPath(); g.moveTo(trail[i - 1][0], trail[i - 1][1]); g.lineTo(trail[i][0], trail[i][1]); g.stroke(); }
+          g.fillStyle = FLESH; juice.forEach(j => { g.globalAlpha = Math.max(0, 1 - j.t / .8); g.beginPath(); g.arc(j.x, j.y, j.r, 0, TAU); g.fill(); }); g.globalAlpha = 1;
+          pops.forEach(p => txt(p.s, p.x, p.y - p.t * 40, p.big ? (phone ? 22 : 28) : (phone ? 18 : 22), { w: 700, a: Math.max(0, 1 - p.t) }));
+          if (!done) hud(`Banana ${Math.max(1, k + 1)} of ${TOSSES} · ${scores.reduce((a, b) => a + b, 0) + (state === 'fly' ? nClean() : 0)} clean`);
+        },
+      };
+      return o;
+    },
+
+    brick() {
+      // a crane swings each letter over the stack; drop it so it lands on the one below
+      const phone = W < 760, R = rackLayout(), ground = rackY0 - rs * fs * .85 - 14, hookY = topSafe + 36, dust = [], placed = [];
+      const S = Math.min(phone ? .5 : .4, (ground - hookY - 60) / (4 * .72 * fs)), Z = S * fs, amp = Math.min(W * .3, 300), rope = Z * .45, half = Math.min(W * .4, 420);
+      let n = 0, state = 'fetch', at = clock, ph = rand(0, TAU), hx = W / 2, x = W / 2, y = 0, vy = 0, off = 0, offT = 0, stackTop = ground, done = false, cur = null, idle = clock, from = null;
+      letters.forEach(L => { L.tx = R[L.i].x; L.ty = R[L.i].y; L.ts = rs; L.ta = 0; L.rigid = true; L.dx.fill(0); L.dv.fill(0); L.calm = true; });
+      const hang = () => hookY + rope - cur.S.t * Z, ext = (L, X) => [X + L.S.l * Z, X + L.S.r * Z];
+      function next() { cur = letters[n]; state = 'fetch'; at = clock; from = [cur.x, cur.y, cur.s]; cur.ts = S; }
+      function land(t) {
+        const top = placed[placed.length - 1];
+        if (top) {
+          const [a1, b1] = ext(cur, x), [a2, b2] = ext(top.L, top.x), ov = Math.min(b1, b2) - Math.max(a1, a2);
+          if (ov < .2 * Math.min(b1 - a1, b2 - a2)) { // it catches the edge and goes over
+            const sd = x < top.x ? -1 : 1;
+            cur.mode = 'free'; cur.until = Infinity; cur.grav = 1; cur.e = .3; cur.pass = clock + 30; cur.die = clock; cur.vx = sd * rand(160, 300); cur.vy = -120; cur.va = sd * rand(3, 6);
+            done = true; shake = 6; state = 'over'; o.say = n ? `${Num(n)} high.${best('brick', n)}` : 'Missed the first one.'; o.dur = t + 1.6;
+            return;
+          }
+        }
+        const contact = stackTop + off, cyT = stackTop - cur.S.d * Z;
+        placed.push({ L: cur, x, y: cyT }); stackTop = cyT + cur.S.t * Z; n++; shake = Math.min(14, 4 + vy / 300);
+        for (let k = 0; k < 16; k++) dust.push({ x: x + rand(-.35, .35) * Z, y: contact, vx: rand(-220, 220), vy: rand(-260, -30), r: rand(2, 5), life: 1 });
+        if (n === 15) { done = true; state = 'over'; o.say = `All fifteen. Topped out.${best('brick', n)}`; o.dur = t + 1.8; return; }
+        offT = Math.max(offT, hookY + rope + Z * 2.3 - stackTop);
+        next();
+      }
+      function drop() { if (state !== 'swing' || done) return; state = 'fall'; vy = 0; idle = clock; }
+      next();
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ n, state, x, hx, stackTop, off }),
+        end() { letters.forEach(L => { L.die = 0; }); },
+        tap() { drop(); }, key(ch) { if (ch === ' ') drop(); },
+        step(h, t) {
+          off += (offT - off) * Math.min(1, h * 5);
+          dust.forEach(d => { d.vy += 900 * h; d.x += d.vx * h; d.y += d.vy * h; d.life -= h * 1.6; });
+          placed.forEach(p => put(p.L, p.x, p.y + off));
+          if (state === 'over') return;
+          ph += h * (1.5 + n * .13); hx = W / 2 + Math.sin(ph) * amp;
+          if (state === 'fetch') {
+            const u = easeIO(clamp((clock - at) / .45, 0, 1)); x = hx; y = hang();
+            put(cur, from[0] + (x - from[0]) * u, from[1] + (y - from[1]) * u); cur.s = from[2] + (S - from[2]) * u;
+            if (u >= 1) state = 'swing';
+          } else if (state === 'swing') { x = hx; y = hang(); put(cur, x, y); }
+          else if (state === 'fall') {
+            vy += 3400 * h; y += vy * h;
+            if (y + cur.S.d * Z >= stackTop + off) { y = stackTop + off - cur.S.d * Z; put(cur, x, y); land(t); } else put(cur, x, y);
+          }
+          if (!done && clock - idle > 12) { done = true; state = 'over'; o.say = 'Never mind.'; o.dur = t + .2; }
+        },
+        under() {
+          base(); g.lineCap = 'round';
+          g.strokeStyle = rgb(col.ink, .3); g.lineWidth = 2; g.beginPath(); g.moveTo(0, hookY); g.lineTo(W, hookY); g.stroke();
+          const gy = ground + off; if (gy < H) { g.strokeStyle = rgb(col.ink, .55); g.lineWidth = 3; g.beginPath(); g.moveTo(W / 2 - half, gy + 1.5); g.lineTo(W / 2 + half, gy + 1.5); g.stroke(); }
+          if (state === 'swing' || state === 'fetch') { g.strokeStyle = inkStr; g.lineWidth = 2; g.beginPath(); g.moveTo(hx, hookY); g.lineTo(hx, hookY + rope); g.stroke(); }
+          g.fillStyle = inkStr; g.beginPath(); g.roundRect(hx - 15, hookY - 6, 30, 12, 4); g.fill();
+        },
+        over() {
+          base(); g.fillStyle = inkStr; dust.forEach(d => { if (d.life > 0) { g.globalAlpha = d.life; g.beginPath(); g.arc(d.x, d.y, d.r, 0, TAU); g.fill(); } }); g.globalAlpha = 1;
+          if (!done) hud(`${n} high`);
+        },
+      };
+      return o;
+    },
+
+    panic(ws, rest) {
+      // breathe with it: tap each time the ring closes on the circle, until it calms down
+      const phone = W < 760, BEAT = 1.15, LEAD = 1.4, em = lineEm(wordOf(ws)), Rm = (rackY0 - rs * fs * .7 - topSafe - 40) / 2, S = Math.min(ws[0].ts, W * .56 / (em * fs), Rm * 1.7 / (em * fs)), cy = topSafe + 30 + Rm, R0 = Math.max(em * fs * S * .58, 60);
+      lineUp(ws, S, W / 2, cy); const at = ws.map(L => [L.tx, L.ty]);
+      let p = .6, k = 0, done = false, calm = false, jitAt = 0, dir = rand(0, TAU), turn = 0, fb = null, flash = -9;
+      ws.forEach(L => { L.rigid = true; L.dx.fill(0); L.dv.fill(0); L.k = 900; L.c = 34; });
+      rest.forEach(L => { L.rigid = true; L.mode = 'free'; L.until = Infinity; L.grav = 0; L.e = .5; L.ts = phone ? .34 : .3; L.pass = 0; });
+      const beat = i => LEAD + i * BEAT;
+      function check(t) {
+        if (done) return;
+        if (p <= 0) { p = 0; done = calm = true; const s = +t.toFixed(1); o.say = `Calm in ${s} seconds.${best('panic', s, true)}`; o.dur = t + 1.6; rest.forEach(L => { L.vx *= .2; L.vy *= .2; L.mode = 'spring'; L.pass = clock + .9; }); }
+        else if (p >= 1) { p = 1; done = true; o.say = 'Full panic.'; o.dur = t + 1.4; }
+      }
+      function judge(t) {
+        if (done) return;
+        const dt = t - beat(k);
+        if (Math.abs(dt) < .1) { p -= .15; fb = { s: 'Breathe.', t: clock }; flash = clock; k++; }
+        else if (Math.abs(dt) < .24) { p -= .07; fb = { s: dt < 0 ? 'Early.' : 'Late.', t: clock }; flash = clock; k++; }
+        else { p += .06; fb = { s: 'Not yet.', t: clock }; shake = 5; }
+        check(t);
+      }
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ p, k, next: beat(k), calm }),
+        tap() { judge(clock - fxT); }, key(ch) { if (ch === ' ') judge(clock - fxT); },
+        step(h, t) {
+          if (!done) {
+            p = Math.min(1, p + h * .014);
+            if (t > beat(k) + .24) { p += .09; fb = { s: 'Missed.', t: clock }; k++; }
+            check(t);
+          }
+          if (t > jitAt) {
+            jitAt = t + .035; const amt = calm ? 0 : 1.5 + p * (phone ? 12 : 22);
+            ws.forEach((L, i) => { L.tx = at[i][0] + rand(-amt, amt); L.ty = at[i][1] + rand(-amt, amt); L.ta = rand(-amt, amt) * .004; });
+          }
+          if (calm) return;
+          if (t > turn) { turn = t + rand(.5, .9); dir = rand(0, TAU); }
+          const f = 1500 + p * 6000, cap = 500 + p * 2400;
+          rest.forEach(L => {
+            L.vx += (Math.cos(dir) + rand(-1.4, 1.4)) * f * h; L.vy += (Math.sin(dir) + rand(-1.4, 1.4)) * f * h;
+            const sp = Math.hypot(L.vx, L.vy); if (sp > cap) { L.vx *= cap / sp; L.vy *= cap / sp; }
+            const top = topSafe + 14 + .33 * L.s * fs; if (L.y < top) { L.y = top; L.vy = Math.abs(L.vy); }
+          });
+        },
+        over(t) {
+          base(); const cx = W / 2;
+          g.lineWidth = 3; g.strokeStyle = rgb(col.ink, .4); g.beginPath(); g.arc(cx, cy, R0, 0, TAU); g.stroke();
+          const fl = clamp(1 - (clock - flash) / .45, 0, 1);
+          if (fl > 0) { g.strokeStyle = rgb(col.ink, .7 * fl); g.lineWidth = 3 + 6 * fl; g.beginPath(); g.arc(cx, cy, R0 * (1 + (1 - fl) * .35), 0, TAU); g.stroke(); }
+          if (!done) {
+            const u = (beat(k) - t) / BEAT;
+            if (u < 1 && u > -.25) { const Rx = Math.max(R0 + 10, Math.min(R0 * 1.9, cy - topSafe - 26, dockTop - cy - 8, W / 2 - 10)); g.strokeStyle = rgb(col.ink, .9 * clamp(1 - u, 0, 1)); g.lineWidth = 4; g.beginPath(); g.arc(cx, cy, R0 + (Rx - R0) * Math.max(0, u), 0, TAU); g.stroke(); }
+            hud(`Panic ${Math.round(p * 100)}%`);
+          }
+          if (fb && clock - fb.t < .7) txt(fb.s, cx, cy + R0 + (phone ? 26 : 32), phone ? 16 : 18, { w: 700, a: Math.min(1, 2 * (1 - (clock - fb.t) / .7)) });
+          else if (!done) txt(k % 2 ? 'Breathe out' : 'Breathe in', cx, cy + R0 + (phone ? 26 : 32), phone ? 14 : 15, { w: 500, a: .6 });
+        },
+      };
+      return o;
+    },
+
+    train(ws) {
+      // a crossing: three tracks of letter trains, and one letter hopping over them, there and back
+      const phone = W < 760, P = ws[0], cars = letters.filter(L => L !== P), NT = 3, Zc = (phone ? .3 : .22) * fs, Zp = (phone ? .4 : .3) * fs;
+      const yA = dockTop - (phone ? 84 : 70), yB = topSafe + (phone ? 40 : 46), rows = Array.from({ length: NT + 2 }, (_, i) => yA + (yB - yA) * i / (NT + 1));
+      const tracks = [cars.slice(0, 5), cars.slice(5, 10), cars.slice(10)].map((list, j) => {
+        const cum = []; let a = 0; list.forEach((L, i) => { cum[i] = a; a += adv(L.ch) * Zc + Zc * .18; });
+        list.forEach(L => { L.ts = Zc / fs; L.ta = 0; L.k = 1400; L.c = 70; });
+        return { list, cum, len: a, dir: j % 2 ? 1 : -1, v: W * rand(.27, .4), pos: rand(-a, W), y: rows[j + 1], puffs: [], puffAt: 0 };
+      });
+      let r = 0, d = 1, hop = null, across = 0, done = false, idle = clock;
+      P.ts = Zp / fs; P.ta = 0; P.k = 900; P.c = 40; put(P, W / 2, rows[0]);
+      function go() { if (done || hop) return; hop = { a: r, b: r + d, t: clock }; idle = clock; }
+      function hit(L, t) {
+        done = true; shake = 14; poke(L, P.x, P.y, 0, 1, 3.6);
+        P.mode = 'free'; P.until = Infinity; P.grav = 1; P.e = .4; P.pass = clock + .3; P.vx = (P.x - L.x) * 8 + rand(-200, 200); P.vy = -620; P.va = rand(-8, 8); P.calm = false;
+        o.say = across ? `${Num(across)} across.${best('train', across)}` : 'Flattened. Not one across.'; o.dur = t + 1.5;
+      }
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ r, d, across, hop: !!hop, tracks: tracks.map(tr => tr.list.map(L => Math.round(L.x))) }),
+        tap() { go(); }, key(ch) { if (ch === ' ') go(); },
+        step(h, t) {
+          tracks.forEach(tr => {
+            tr.pos += tr.dir * tr.v * h; const per = W + tr.len + 160; let wrap = false;
+            if (tr.pos > W + 80) { tr.pos -= per; wrap = true; } else if (tr.pos < -tr.len - 80) { tr.pos += per; wrap = true; }
+            tr.list.forEach((L, i) => { L.tx = tr.pos + tr.cum[i] + adv(L.ch) * Zc / 2; L.ty = tr.y + Math.sin((L.tx + i * 40) * .05) * 1.6; L.ta = Math.sin(t * 9 + i) * .016; if (wrap) { L.x = L.tx; L.vx = 0; } });
+            const eng = tr.dir < 0 ? tr.list[0] : tr.list[tr.list.length - 1];
+            if (t > tr.puffAt) { tr.puffAt = t + .14; tr.puffs.push({ x: eng.x, y: eng.y - Zc * .55, r: Zc * .08, a: .45 }); }
+            tr.puffs.forEach(q => { q.y -= 60 * h; q.x -= tr.dir * tr.v * .15 * h; q.r += Zc * .25 * h; q.a -= h * .5; }); while (tr.puffs.length && tr.puffs[0].a <= 0) tr.puffs.shift();
+          });
+          if (done) return;
+          let y = rows[r], on = r;
+          if (hop) {
+            const u = clamp((clock - hop.t) / .2, 0, 1); y = rows[hop.a] + (rows[hop.b] - rows[hop.a]) * u - Math.sin(u * Math.PI) * Zp * .35; on = u < .5 ? hop.a : hop.b;
+            if (u >= 1) { r = hop.b; hop = null; if (r === 0 || r === NT + 1) { across++; d = -d; shake = 3; tracks.forEach(tr => { tr.v *= 1.14; }); } }
+          }
+          put(P, W / 2, y);
+          if (on >= 1 && on <= NT) { for (const L of tracks[on - 1].list) if (Math.abs(L.x - P.x) < adv(L.ch) * Zc / 2 + adv(P.ch) * Zp * .38) { hit(L, t); break; } }
+          if (!done && clock - idle > 12) { done = true; o.say = across ? `${Num(across)} across.${best('train', across)}` : 'Missed the train.'; o.dur = t + .3; }
+        },
+        under() {
+          base(); g.lineCap = 'round';
+          tracks.forEach(tr => {
+            const rail = tr.y + XH / 2 * Zc + Zc * .13;
+            g.strokeStyle = inkStr; g.fillStyle = inkStr; g.lineWidth = 2;
+            g.beginPath(); g.moveTo(0, rail + Zc * .09); g.lineTo(W, rail + Zc * .09); g.stroke();
+            for (let x = 0; x < W; x += 40) g.fillRect(x, rail + Zc * .09, 10, 4);
+            tr.list.forEach((L, i) => {
+              const w = adv(L.ch) * Zc * .5;
+              g.fillRect(L.x - w, rail - Zc * .1, w * 2, Zc * .05);
+              g.beginPath(); g.arc(L.x - w * .6, rail + Zc * .02, Zc * .065, 0, TAU); g.arc(L.x + w * .6, rail + Zc * .02, Zc * .065, 0, TAU); g.fill();
+              if (i) { g.beginPath(); g.moveTo(tr.list[i - 1].x, rail - Zc * .075); g.lineTo(L.x, rail - Zc * .075); g.stroke(); }
+            });
+            tr.puffs.forEach(q => { if (q.a > 0) { g.globalAlpha = q.a; g.beginPath(); g.arc(q.x, q.y, q.r, 0, TAU); g.fill(); } }); g.globalAlpha = 1;
+          });
+          g.strokeStyle = rgb(col.ink, .35); g.lineWidth = 2; g.setLineDash([8, 10]);
+          [rows[0], rows[NT + 1]].forEach(y => { const yy = y + XH / 2 * Zp + 8; g.beginPath(); g.moveTo(W / 2 - 90, yy); g.lineTo(W / 2 + 90, yy); g.stroke(); });
+          g.setLineDash([]);
+        },
+        over() { if (!done) hud(`${across} across`); },
+      };
+      return o;
+    },
+
+    paint(ws, rest) {
+      // a coloring book: paint each letter in before its time runs out. Paint outside the lines still shows
+      const phone = W < 760, N = ws.length, GOAL = 85, sc = .25, mw = Math.ceil(W * sc), mh = Math.ceil(H * sc), INKS = ['#2a5fd8', '#f2c230', '#e43f7f', '#13a06f', '#ef6a14', '#1d1934'];
+      const word = wordOf(ws), rowS = Math.min(phone ? .5 : .3, W * .62 / (lineEm(word) * fs)), Zs = rowS * fs, rowY = dockTop - (phone ? 34 : 40) - Zs * .3;
+      const top = topSafe + 40, bot = rowY - Zs * .75 - (phone ? 18 : 26), cx = W / 2, cy = (top + bot) / 2;
+      const Zp = Math.min(...ws.map(L => Math.min((bot - top) / (L.S.d - L.S.t), W * (phone ? .8 : .5) / (L.S.r - L.S.l)))), BW = Zp * (phone ? .2 : .17);
+      const slots = []; { let x = W / 2 - lineEm(word) * Zs / 2; ws.forEach((L, i) => { const a = adv(L.ch) * Zs, nx = ws[i + 1]; slots.push(x + a / 2); x += a + (nx ? gap(L.ch, nx.ch) * Zs : 0); }); }
+      const pc = document.createElement('canvas'); pc.width = cv.width; pc.height = cv.height; const pg = pc.getContext('2d'); pg.lineCap = pg.lineJoin = 'round';
+      const cov = document.createElement('canvas'); cov.width = mw; cov.height = mh; const cg = cov.getContext('2d', { willReadFrequently: true }); cg.lineCap = cg.lineJoin = 'round';
+      const shots = [];
+      let j = -1, L = null, lx = 0, ly = 0, mask = null, area = 1, pct = 0, outPx = 0, hue = Math.floor(rand(0, 6)), travel = 0, lastP = null, width = BW * .6, pen = false;
+      let state = 'ready', at = clock, t0 = 0, limit = 1, countAt = 0, done = false, painted = 0, outSum = 0, allSum = 0;
+      offstage(rest); ws.forEach(l => { l.hide = true; });
+      const left = () => state === 'go' ? Math.max(0, limit - (clock - t0)) : limit;
+      function next() {
+        j++; if (j === N) { finish(true); return; }
+        L = ws[j]; const S = L.S; lx = cx - (S.l + S.r) / 2 * Zp; ly = cy - (S.t + S.d) / 2 * Zp;
+        pg.setTransform(1, 0, 0, 1, 0, 0); pg.clearRect(0, 0, pc.width, pc.height); pg.setTransform(DPR, 0, 0, DPR, 0, 0);
+        cg.setTransform(1, 0, 0, 1, 0, 0); cg.clearRect(0, 0, mw, mh); cg.setTransform(sc, 0, 0, sc, 0, 0);
+        const m = document.createElement('canvas'); m.width = mw; m.height = mh; const mc = m.getContext('2d', { willReadFrequently: true });
+        mc.setTransform(sc * Zp, 0, 0, sc * Zp, sc * lx, sc * ly); mc.fill(wpath(S, REST));
+        const d = mc.getImageData(0, 0, mw, mh).data; mask = new Uint8Array(mw * mh); area = 0;
+        for (let i = 0; i < mask.length; i++) if (d[i * 4 + 3] > 128) { mask[i] = 1; area++; }
+        area = Math.max(1, area); pct = 0; outPx = 0; pen = false; lastP = null; state = 'ready'; at = clock;
+        limit = clamp(2.4 + area / (sc * sc) / (BW * 150), 4, 9) * (1 - j * .06); // bigger letters get longer; every letter a little less
+      }
+      function count() {
+        const d = cg.getImageData(0, 0, mw, mh).data; let n = 0, all = 0;
+        for (let i = 0; i < mask.length; i++) if (d[i * 4 + 3] > 100) { all++; if (mask[i]) n++; }
+        pct = Math.round(n / area * 100); outPx = all - n;
+      }
+      function stroke(x, y) {
+        if (!lastP) { lastP = [x, y]; return; }
+        const sp = Math.hypot(x - lastP[0], y - lastP[1]); if (sp < 1) return;
+        width += (clamp(BW - sp * .6, BW * .35, BW) - width) * .25; travel += sp;
+        if (travel > Zp * 1.4) { travel = 0; hue++; } // a long stroke changes color partway, like a brush running out
+        [pg, cg].forEach(c => { c.strokeStyle = INKS[hue % 6]; c.lineWidth = width; c.beginPath(); c.moveTo(lastP[0], lastP[1]); c.lineTo(x, y); c.stroke(); });
+        lastP = [x, y];
+      }
+      function snap() { // keep the painted letter: its paint, clipped to it, flies down to its place in the word
+        const S = L.S, x0 = lx + S.l * Zp - 4, y0 = ly + S.t * Zp - 4, w = (S.r - S.l) * Zp + 8, hh = (S.d - S.t) * Zp + 8, img = document.createElement('canvas');
+        img.width = Math.ceil(w * DPR); img.height = Math.ceil(hh * DPR); const ic = img.getContext('2d');
+        ic.setTransform(DPR * Zp, 0, 0, DPR * Zp, DPR * (lx - x0), DPR * (ly - y0)); const p = wpath(S, REST);
+        ic.fillStyle = bgStr; ic.fill(p); ic.save(); ic.clip(p); ic.setTransform(1, 0, 0, 1, 0, 0); ic.drawImage(pc, -x0 * DPR, -y0 * DPR); ic.restore();
+        shots.push({ img, j, S, w, hh, ox: lx, oy: ly, t: clock });
+      }
+      function finish(all) {
+        done = true; pen = false; const outside = allSum ? Math.round(outSum / allSum * 100) : 0;
+        o.say = all ? `All ${NUM[N]} painted, ${outside}% outside the lines.${best('paint2', N)}` : `Out of time on the ${L.ch}. ${painted ? Num(painted) + ' painted.' : 'None painted.'}${best('paint2', painted)}`;
+        o.dur = clock - fxT + 1.8;
+      }
+      const o = {
+        dur: Infinity, cursor: 'crosshair', peek: () => ({ j, state, pct, left: left(), limit, ready: state === 'go' || state === 'ready', box: L ? [lx + L.S.l * Zp, ly + L.S.t * Zp, lx + L.S.r * Zp, ly + L.S.d * Zp] : null }),
+        tap(x, y) { if (done || !L || (state !== 'ready' && state !== 'go')) return; if (state === 'ready') { state = 'go'; t0 = clock; } pen = true; hue++; travel = 0; lastP = null; stroke(x, y); },
+        lift() { pen = false; lastP = null; },
+        key() {},
+        step(h, t) {
+          if (j < 0 && t > .3) next();
+          if (done || !L) return;
+          if (state === 'ready' && clock - at > .5) { state = 'go'; t0 = clock; }
+          if (state === 'go') {
+            if (pen && ptr.on && ptr.fresh) { stroke(ptr.x, ptr.y); ptr.fresh = false; }
+            if (clock > countAt) { countAt = clock + .12; count(); }
+            if (pct >= GOAL) { count(); state = 'got'; at = clock; pen = false; painted++; outSum += outPx; allSum += outPx + pct * area / 100; snap(); shake = 2; }
+            else if (clock - t0 > limit) { count(); pen = false; state = 'miss'; at = clock; shake = 5; finish(false); }
+          }
+          if (state === 'got' && clock - at > .7) next();
+        },
+        over(t) {
+          const A = done ? clamp(o.dur - t, 0, 1) : 1;
+          // the word along the bottom: painted letters in their place, the rest waiting in outline
+          ws.forEach((l, i) => {
+            if (shots.some(s => s.j === i)) return;
+            base(); g.setTransform(DPR * Zs, 0, 0, DPR * Zs, DPR * (slots[i] + shakeX), DPR * (rowY + shakeY)); const p = wpath(l.S, REST);
+            g.lineWidth = 4 / Zs; g.lineJoin = 'round'; g.strokeStyle = rgb(col.ink, i === j && !done ? .92 : .6); g.stroke(p); g.fillStyle = bgStr; g.fill(p);
+          });
+          shots.forEach(s => { // outline first, wide, then the painted letter over its inner half: no seams where strokes overlap
+            const u = easeIO(clamp((clock - s.t) / .6, 0, 1)), Zc = Zp + (Zs - Zp) * u, k = Zc / Zp, ox = s.ox + (slots[s.j] - s.ox) * u, oy = s.oy + (rowY - s.oy) * u;
+            base(); g.setTransform(DPR * Zc, 0, 0, DPR * Zc, DPR * (ox + shakeX), DPR * (oy + shakeY)); g.lineWidth = 5 / Zc; g.lineJoin = 'round'; g.strokeStyle = inkStr; g.stroke(wpath(s.S, REST));
+            g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(s.img, (ox + s.S.l * Zc - 4 * k + shakeX) * DPR, (oy + s.S.t * Zc - 4 * k + shakeY) * DPR, s.w * k * DPR, s.hh * k * DPR);
+          });
+          if (!L || state === 'got') return;
+          const p = wpath(L.S, REST), pop = state === 'ready' ? easeBack(clamp((clock - at) / .35, 0, 1)) : 1, Z = Zp * pop, X = cx + (lx - cx) * pop, Y = cy + (ly - cy) * pop;
+          g.globalAlpha = A;
+          base(); g.save(); g.beginPath(); g.rect(0, topSafe + 26, W, H); g.clip(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = .85 * A; g.drawImage(pc, 0, 0); g.restore(); g.globalAlpha = A; // paint outside the lines still shows
+          base(); g.setTransform(DPR * Z, 0, 0, DPR * Z, DPR * (X + shakeX), DPR * (Y + shakeY)); g.lineJoin = 'round';
+          g.lineWidth = 6 / Z; g.strokeStyle = inkStr; g.stroke(p); g.fillStyle = bgStr; g.fill(p); g.fillStyle = rgb(col.ink, .05); g.fill(p);
+          g.save(); g.clip(p); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(pc, 0, 0); g.restore();
+          g.globalAlpha = 1;
+          if (!done) { const s = left(); hud(`${L.ch} · ${pct}% · ${s < 3 ? s.toFixed(1) : Math.ceil(s)}s`); }
+        },
+      };
+      return o;
+    },
+
+    nap() {
+      // they're asleep. Carry a light across and back without waking anyone
+      const phone = W < 760, DUR = 25, R = fs * (phone ? .8 : .62), mid = letters.reduce((a, L) => a + L.hy, 0) / 15, side = Math.random() < .5 ? -1 : 1, wake = new Array(15).fill(0);
+      let quiet = phone ? 115 : 160, goal = 1, across = 0, done = false, x = W * .045, y = (topSafe + dockTop) / 2, vx = 0, vy = 0, carry = false, loud = 0;
+      letters.forEach((L, i) => { L.tx = W / 2 + (L.hx - W / 2) * .8; L.ty = mid + (L.hy - mid) * .8 + (i * 7 % 5) * 3; L.ta = L.za = side * (.42 + (i * 13 % 5) * .04); L.ts = .74; L.wT = .06; L.k = 46; L.c = 9; L.delay = 0; });
+      const o = {
+        dur: Infinity, peek: () => ({ x, y, carry, across, loud, wake: wake.map(v => +v.toFixed(2)) }),
+        tap() {}, key() {},
+        step(h, t) {
+          const asleep = letters.filter(L => wake[L.i] < .4); if (asleep.length) zStep(h, asleep); zs.forEach(z => { if (z.y < topSafe + 70) z.a -= h * 2.5; });
+          if (done) return;
+          if (!carry && ptr.on && Math.hypot(ptr.x - x, ptr.y - y) < (phone ? 46 : 34)) carry = true;
+          if (touch && !ptr.on) carry = false;
+          const tx = carry ? ptr.x : x, ty = carry ? clamp(ptr.y, topSafe + 10, dockTop - 10) : y;
+          vx += ((tx - x) * 9 - vx) * Math.min(1, h * 10); vy += ((ty - y) * 9 - vy) * Math.min(1, h * 10);
+          const sp = Math.hypot(vx, vy); if (sp > 1100) { vx *= 1100 / sp; vy *= 1100 / sp; }
+          x += vx * h; y += vy * h;
+          loud += (Math.max(0, (Math.min(sp, 1100) - quiet) / quiet) - loud) * Math.min(1, h * 8);
+          let woke = null;
+          letters.forEach(L => {
+            const d = Math.hypot(L.x - x, L.y - y), i = L.i;
+            if (d < R && loud > 0) wake[i] += loud * (1 - d / R) * h * 3.1;
+            wake[i] = Math.max(0, wake[i] - h * .1);
+            const w = Math.min(1, wake[i]); L.ta = L.za * (1 - w * .8); L.wT = .06 + w * .3;
+            if (w > .55 && Math.random() < h * 20) poke(L, L.x, L.y - .3 * fs, 0, 1, .8 * w);
+            if (wake[i] >= 1 && !woke) woke = L;
+          });
+          if (woke) {
+            done = true; zs.length = 0;
+            letters.forEach(L => { L.ta = 0; L.wT = REST; L.k = 0; L.c = 0; L.vy -= rand(300, 640); L.calm = false; });
+            o.say = `You woke the ${woke.ch}.` + (across ? ` ${Num(across)} across first.${best('nap', across)}` : ''); o.dur = t + 1.6; return;
+          }
+          if (goal > 0 ? x > W * .92 : x < W * .08) { across++; goal = -goal; quiet *= .88; shake = 2; }
+          if (t > DUR) { done = true; o.say = across ? `${Num(across)} across without waking anyone.${best('nap', across)}` : 'Still on the first side.'; o.dur = t + 1.4; }
+        },
+        over(t) {
+          base();
+          if (!done) { g.fillStyle = rgb(col.ink, .1); g.fillRect(goal > 0 ? W * .92 : 0, topSafe, W * .08, dockTop - topSafe); }
+          const halo = 10 + loud * 34, gr = g.createRadialGradient(x, y, 0, x, y, halo * 2.2);
+          gr.addColorStop(0, 'rgba(255,217,138,.55)'); gr.addColorStop(1, 'rgba(255,217,138,0)');
+          g.fillStyle = gr; g.beginPath(); g.arc(x, y, halo * 2.2, 0, TAU); g.fill();
+          g.fillStyle = '#ffd98a'; g.beginPath(); g.arc(x, y, phone ? 8 : 7, 0, TAU); g.fill();
+          if (!carry && !done) { g.strokeStyle = 'rgba(255,217,138,.7)'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 16 + Math.sin(clock * 4) * 3, 0, TAU); g.stroke(); }
+          if (!done) hud(carry ? `${across} across · ${Math.max(0, Math.ceil(DUR - t))}` : (touch ? 'Touch the light to pick it up' : 'Point at the light to pick it up'));
+        },
+      };
+      return o;
+    },
+
+    big() {
+      // a letter so close up it's only an edge; it backs away until you can name it
+      const phone = W < 760, ROUNDS = 5, ZOOM = 6, KMAX = 3.5, chars = [...new Set(NAME)], order = chars.slice().sort(() => Math.random() - .5).slice(0, ROUNDS);
+      const bw = phone ? Math.min(78, (W - 68) / 4) : 88, bh = phone ? 56 : 62, by = dockTop - (phone ? 92 : 80) - bh, lensT = topSafe + 28, lensB = by - (phone ? 20 : 28), lw = Math.min(W - 32, 720), lx = (W - lw) / 2, lh = lensB - lensT;
+      const cx = W / 2, cy = (lensT + lensB) / 2, Zfit = Math.min(lw * .8, lh * .78), btnX = i => cx + (i - 1.5) * (bw + 12);
+      let r = -1, S = null, f = null, t0 = 0, state = 'zoom', score = 0, picks = [], pickedI = -1, msg = '', revealAt = 0, u0 = 0, done = false;
+      offstage(letters);
+      const sm = new Map(), smooth = S => { // the outline through the midpoints, curved at each point: no facets up close
+        let P = sm.get(S); if (P) return P; P = new Path2D(); const A = S.ra, B = S.rb, pt = i => [A[2 * i] + (B[2 * i] - A[2 * i]) * REST, A[2 * i + 1] + (B[2 * i + 1] - A[2 * i + 1]) * REST];
+        S.rings.forEach(([s, e]) => { const n = e - s, q = k => pt(s + (k % n)), [x0, y0] = q(0), [x1, y1] = q(1); P.moveTo((x0 + x1) / 2, (y0 + y1) / 2); for (let k = 1; k <= n; k++) { const [ax, ay] = q(k), [bx, by] = q(k + 1); P.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2); } P.closePath(); });
+        sm.set(S, P); return P;
+      };
+      function next() {
+        r++; if (r === ROUNDS) { done = true; o.say = `${score} points.${best('big', score)}`; o.dur = clock - fxT + 1.2; return; }
+        S = shape(order[r]); const [s, e] = S.rings[0], i = s + Math.floor(rand(0, e - s));
+        f = [S.ra[2 * i] + (S.rb[2 * i] - S.ra[2 * i]) * REST, S.ra[2 * i + 1] + (S.rb[2 * i + 1] - S.ra[2 * i + 1]) * REST];
+        t0 = clock; state = 'zoom'; pickedI = -1; msg = '';
+        picks = [order[r], ...chars.filter(c => c !== order[r]).sort(() => Math.random() - .5).slice(0, 3)].sort(() => Math.random() - .5);
+      }
+      const prog = () => state === 'zoom' ? clamp((clock - t0) / ZOOM, 0, 1) : u0 + (1 - u0) * easeIO(clamp((clock - revealAt) / .5, 0, 1));
+      function answer(ch) {
+        if (state !== 'zoom' || done || !S) return;
+        const u = prog(), ok = ch === order[r]; u0 = u; revealAt = clock; state = 'reveal'; pickedI = picks.indexOf(ch);
+        const gain = ok ? Math.max(10, Math.round(100 * (1 - u))) : 0; score += gain;
+        msg = ok ? `It's ${aOrAn(ch)} ${ch}. +${gain}` : `It was ${aOrAn(order[r])} ${order[r]}.`;
+        if (!ok) shake = 5;
+      }
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ r, state, score, answer: order[r], picks, u: S ? prog() : 0 }),
+        step() {
+          if (done) return;
+          if (r < 0) next();
+          if (state === 'zoom' && prog() >= 1) { u0 = 1; revealAt = clock; state = 'reveal'; msg = `Time. It was ${aOrAn(order[r])} ${order[r]}.`; }
+          if (state === 'reveal' && clock - revealAt > 1.5) next();
+        },
+        tap(x, y) { if (y < by - 8 || y > by + bh + 8) return; const i = picks.findIndex((_, k) => Math.abs(x - btnX(k)) < bw / 2 + 6); if (i >= 0) answer(picks[i]); },
+        key(ch) { if (chars.includes(ch)) answer(ch); },
+        over() {
+          if (!S) return;
+          const u = prog(), k = Math.pow(KMAX, 1 - u), v = u * u, Fx = f[0] + ((S.l + S.r) / 2 - f[0]) * (.3 + .7 * v), Fy = f[1] + ((S.t + S.d) / 2 - f[1]) * (.3 + .7 * v), Zk = Zfit * k;
+          base(); g.save(); g.beginPath(); g.roundRect(lx, lensT, lw, lh, 22); g.fillStyle = rgb(col.ink, .05); g.fill(); g.clip();
+          g.setTransform(DPR * Zk, 0, 0, DPR * Zk, DPR * (cx - Fx * Zk + shakeX), DPR * (cy - Fy * Zk + shakeY)); g.fillStyle = inkStr; g.fill(smooth(S));
+          g.restore(); base(); g.strokeStyle = rgb(col.ink, .45); g.lineWidth = 2; g.beginPath(); g.roundRect(lx, lensT, lw, lh, 22); g.stroke();
+          picks.forEach((ch, i) => {
+            const x = btnX(i), right = state === 'reveal' && ch === order[r], wrong = state === 'reveal' && i === pickedI && !right;
+            base(); g.beginPath(); g.roundRect(x - bw / 2, by, bw, bh, 16); g.fillStyle = right ? inkStr : rgb(col.ink, wrong ? .28 : .1); g.fill();
+            g.fillStyle = right ? bgStr : inkStr; glyph(shape(ch), x, by + bh * .52, bh * .55);
+          });
+          if (!done) hud(state === 'reveal' ? msg : `Round ${r + 1} of ${ROUNDS} · ${score}`);
+        },
+      };
+      return o;
+    },
+
+    ink() {
+      // ink spills from the letters; blot the pools before they cover the page
+      const phone = W < 760, LIMIT = .5, pools = [], rings = [], page = W * Math.max(1, dockTop - topSafe);
+      let n = 0, spawnAt = .3, done = false, cover = 0;
+      homeAll();
+      const wob = (p, a) => { let k = 1; p.seeds.forEach(s => { k += Math.sin(a * s[2] + s[0] + clock * 1.1) * s[1]; }); return k; };
+      function spawn(t) {
+        const L = pick(letters);
+        pools.push({ x: L.x + rand(-.25, .25) * L.s * fs, y: L.y + rand(-.2, .2) * L.s * fs, r: 4, gr: (phone ? 20 : 30) * (1 + t * .07) * rand(.8, 1.25), seeds: Array.from({ length: 5 }, () => [rand(0, TAU), rand(.04, .1), Math.round(rand(2, 6))]) });
+      }
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ n, cover, pools: pools.map(p => [p.x, p.y, p.r]) }),
+        key() {},
+        tap(x, y) {
+          if (done) return;
+          rings.push({ x, y, t: 0 });
+          let hp = null, bd = 1e9;
+          pools.forEach(p => { const d = Math.hypot(p.x - x, p.y - y) - p.r; if (d < (phone ? 18 : 10) && d < bd) { bd = d; hp = p; } });
+          if (!hp) return;
+          hp.r -= phone ? 46 : 64; shake = 3;
+          if (hp.r < 22) { pools.splice(pools.indexOf(hp), 1); n++; }
+        },
+        step(h, t) {
+          rings.forEach(q => { q.t += h; }); while (rings.length && rings[0].t > .35) rings.shift();
+          if (done) { pools.forEach(p => { p.r += (p.r * 2 + 200) * h; }); return; }
+          if (t > spawnAt) { spawn(t); spawnAt = t + Math.max(.18, 1.28 - t * .028); }
+          pools.forEach(p => { p.r += p.gr * h; p.gr *= 1 + h * .035; });
+          cover = pools.reduce((a, p) => a + Math.PI * p.r * p.r, 0) / page;
+          if (cover >= LIMIT) { done = true; o.say = n ? `${Num(n)} blotted before the page went black.${best('ink', n)}` : 'The page went black.'; o.dur = t + 1.6; }
+        },
+        over(t) {
+          if (pools.length) {
+            base(); g.save(); g.beginPath(); g.rect(-50, topSafe + 26, W + 100, H); g.clip(); g.globalAlpha = done ? clamp(o.dur - t, 0, 1) : 1; g.beginPath();
+            pools.forEach(p => { for (let i = 0; i < 40; i++) { const a = i / 40 * TAU, k = wob(p, a), X = p.x + Math.cos(a) * p.r * k, Y = p.y + Math.sin(a) * p.r * k; if (i) g.lineTo(X, Y); else g.moveTo(X, Y); } g.closePath(); });
+            g.fillStyle = inkStr; g.fill(); g.clip(); letters.forEach(l => drawLetter(l, bgStr)); g.restore();
+          }
+          base(); rings.forEach(q => { const u = q.t / .35, R = 14 + u * 30; g.lineWidth = 4; g.strokeStyle = rgb(col.bg, .6 * (1 - u)); g.beginPath(); g.arc(q.x, q.y, R, 0, TAU); g.stroke(); g.lineWidth = 2; g.strokeStyle = rgb(col.ink, .6 * (1 - u)); g.stroke(); });
+          if (!done) hud(`${n} blotted · ink on ${Math.round(cover * 100)}% of the page`);
+        },
+      };
+      return o;
+    },
+
+    prank() {
+      // tap the letters in name order; every four, the page turns over
+      const phone = W < 760, LIMIT = 40, S = phone ? .42 : .3, spots = rackLayout(), r0 = cv.getBoundingClientRect(), top = topSafe + S * fs * .7, bot = Math.max(topSafe + S * fs, rackY0 - rs * fs - S * fs * .6), ps = [];
+      let k = 0, rot = 0, rotT = 0, done = false, pen = 0, flash = null;
+      letters.forEach(L => {
+        let x, y, tries = 0;
+        do { x = rand(.08, .92) * W; y = rand(top, bot); } while (tries++ < 60 && ps.some(([a, b]) => Math.hypot(a - x, b - y) < S * fs * .95));
+        ps.push([x, y]); L.tx = x; L.ty = y; L.ts = S; L.ta = rand(-.6, .6); L.k = 220; L.c = 18; L.got = false;
+      });
+      const local = (x, y) => { const px = x - r0.left - W / 2, py = y - r0.top - H / 2, c = Math.cos(-rot), s = Math.sin(-rot); return [px * c - py * s + W / 2, px * s + py * c + H / 2]; };
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ k, rot, next: NAME[k], pos: letters.map(L => [L.ch, L.x, L.y, L.got]) }),
+        end() { cv.style.transform = ''; letters.forEach(L => { L.got = false; L.pass = clock + .6; }); },
+        key() {},
+        tap(x, y) {
+          if (done) return;
+          const [lx, ly] = local(x, y); let L = hitTest(lx, ly);
+          if (!L || L.got) { let bd = 1e9; L = null; letters.forEach(l => { if (l.got) return; const d = Math.hypot(l.x - lx, l.y - ly) - .4 * l.s * fs; if (d < (phone ? 22 : 12) && d < bd) { bd = d; L = l; } }); }
+          if (!L) return;
+          if (L.ch !== NAME[k]) { pen++; shakeNo([L]); flash = { x: lx, y: ly, t: clock }; return; }
+          L.got = true; L.tx = spots[k].x; L.ty = spots[k].y; L.ts = rs; L.ta = 0; L.pass = clock + 30; L.swell = clock + .35; normAngle(L); k++;
+          if (k === 15) { done = true; const s = +(clock - fxT + pen).toFixed(1); o.say = `${s} seconds${pen ? `, ${NUM[pen] || pen} wrong` : ''}.${best('prank', s, true)}`; o.dur = clock - fxT + 1.4; rotT = Math.round(rot / TAU) * TAU; }
+          else if (k % 4 === 0) { rotT += Math.PI; shake = 4; }
+        },
+        step(h, t) {
+          const pr = rot; rot += (rotT - rot) * Math.min(1, h * 6); if (Math.abs(rotT - rot) < .001) rot = rotT;
+          if (rot !== pr) cv.style.transform = rot % TAU ? `rotate(${rot}rad)` : '';
+          if (done) return;
+          if (t > LIMIT) { done = true; o.say = `Too slow. ${Num(k)} of fifteen.`; o.dur = t + 1.2; rotT = Math.round(rot / TAU) * TAU; }
+        },
+        over() {
+          base();
+          if (flash && clock - flash.t < .5) { const u = (clock - flash.t) / .5; g.strokeStyle = rgb(col.ink, .7 * (1 - u)); g.lineWidth = 3; g.beginPath(); g.arc(flash.x, flash.y, 16 + u * 20, 0, TAU); g.stroke(); }
+          if (!done) hud(`${(k > 7 ? 'patrick ' + NAME.slice(7, k) : NAME.slice(0, k)) || 'p…'} · ${Math.ceil(clock - fxT + pen)}s`);
+        },
+      };
+      return o;
+    },
+
+    trick() {
+      // three circles: the letter sinks into one, they shuffle, and you pick the one it went into
+      const phone = W < 760, rD = Math.min(W * (phone ? .12 : .062), 92), gapX = rD * (phone ? 2.55 : 3.1), cy = (topSafe + rackY0) / 2 + rD * .4, L = pick(letters), ZL = rD * 1.45, hov = rD * 2.1;
+      toRack(letters.filter(l => l !== L)); L.hide = true; L.tx = W / 2; L.ty = cy;
+      const slotX = s => W / 2 + (s - 1) * gapX, discs = [0, 1, 2].map(i => ({ s: i, x: slotX(i), y: 0, sq: 0, ang: 0, pop: 0, jig: 0 })), rings = [];
+      let under = Math.floor(rand(0, 3)), state = 'show', at = clock, swaps = [], cur = null, wins = 0, picked = -1, done = false, rung = false;
+      let lx = slotX(under), ly = cy - hov, ls = 0, la = 1; // the letter: where it is, how big (0 is gone into the circle), how solid
+      const plan = () => Array.from({ length: Math.min(14, 3 + wins * 2) }, () => { const a = Math.floor(rand(0, 3)); let b = Math.floor(rand(0, 2)); if (b >= a) b++; return [a, b]; });
+      const swapDur = () => Math.max(.17, .46 - wins * .045);
+      const ell = d => { const r = rD * (1 + .22 * d.pop); g.beginPath(); g.ellipse(d.x + d.jig, cy + d.y, r * (1 + .16 * d.sq), r * (1 - .1 * d.sq), d.ang, 0, TAU); };
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ state, wins, under, cups: discs.map(d => Math.round(d.x)), cy }),
+        key() {},
+        tap(x, y) {
+          if (state !== 'pick' || done) return;
+          const i = discs.findIndex(d => Math.hypot(x - d.x, y - (cy + d.y)) < rD * 1.3);
+          if (i < 0) return;
+          picked = i; state = 'reveal'; at = clock; if (i !== under) shake = 5; else wins++;
+        },
+        step(h, t) {
+          const e = clock - at, D = discs[under];
+          discs.forEach(d => { d.pop = Math.max(0, d.pop - h * 3); d.jig = 0; if (!cur || (d !== discs[cur[0]] && d !== discs[cur[1]])) d.sq = Math.max(0, d.sq - h * 8); });
+          if (state === 'show') {
+            lx = D.x; ly = cy - hov + Math.sin(clock * 3) * 4; ls = Math.min(1, ls + h * 5); la = 1;
+            if (e > (wins ? .45 : 1)) { state = 'sink'; at = clock; rung = false; }
+          } else if (state === 'sink') {
+            const u = clamp(e / .55, 0, 1); lx = D.x; ly = cy - hov + hov * easeIO(Math.min(1, u / .6)); ls = u < .5 ? 1 : 1 - easeIO((u - .5) / .5);
+            D.pop = Math.max(D.pop, Math.sin(u * Math.PI) * .5);
+            if (u > .5 && !rung) { rung = true; rings.push({ d: D, t: clock }); }
+            if (u >= 1) { ls = 0; state = 'shuffle'; swaps = plan(); cur = null; at = clock; }
+          } else if (state === 'shuffle') {
+            if (!cur) { cur = swaps.shift() || null; if (!cur) { state = 'pick'; at = clock; } else { cur.t = clock; cur.fa = discs[cur[0]].s; cur.fb = discs[cur[1]].s; } }
+            if (cur) {
+              const u = clamp((clock - cur.t) / swapDur(), 0, 1), e2 = easeIO(u), A = discs[cur[0]], B = discs[cur[1]], xa = slotX(cur.fa), xb = slotX(cur.fb);
+              [[A, xa + (xb - xa) * e2, Math.sin(u * Math.PI) * rD * 1.15], [B, xb + (xa - xb) * e2, -Math.sin(u * Math.PI) * rD * 1.15]].forEach(([d, x, y]) => {
+                const dx = x - d.x, dy = y - d.y; if (Math.hypot(dx, dy) > .3) d.ang = Math.atan2(dy, dx);
+                d.x = x; d.y = y; d.sq = Math.sin(u * Math.PI);
+              });
+              if (u >= 1) { A.s = cur.fb; B.s = cur.fa; A.y = B.y = 0; A.x = slotX(A.s); B.x = slotX(B.s); cur = null; }
+            }
+          } else if (state === 'pick') {
+            discs.forEach((d, i) => { d.y = Math.sin(clock * 2.2 + i * 2) * 3; });
+            if (e > 12) { done = true; state = 'over'; o.say = 'Never mind.'; o.dur = t + .2; }
+          } else if (state === 'reveal') {
+            const P = discs[picked]; if (e < .3) P.pop = Math.max(P.pop, Math.sin(e / .3 * Math.PI) * .35);
+            const ok = picked === under, s0 = ok ? .12 : .5;
+            if (!ok && e < .5) P.jig = Math.sin(e * 46) * 7 * (1 - e / .5);
+            const v = clamp((e - s0) / .45, 0, 1); lx = D.x; ly = cy - hov * easeIO(v); ls = v > 0 ? easeBack(Math.min(1, v * 1.2)) : 0; la = ok ? 1 : .55;
+            if (e > s0 && e - h <= s0) D.pop = .45;
+            if (e > 1.3) {
+              if (ok) { state = 'show'; at = clock; }
+              else { done = true; state = 'over'; o.say = wins ? `${Num(wins)} in a row.${best('trick', wins)}` : 'Not that one.'; o.dur = t + 1.2; }
+            }
+          }
+          while (rings.length && clock - rings[0].t > .4) rings.shift();
+        },
+        over() {
+          base();
+          rings.forEach(r => { const u = (clock - r.t) / .4; g.strokeStyle = rgb(col.ink, .4 * (1 - u)); g.lineWidth = 1 + 3 * (1 - u); g.beginPath(); g.arc(r.d.x, cy + r.d.y, rD * (1.1 + u * .6), 0, TAU); g.stroke(); });
+          discs.slice().sort((a, b) => a.y - b.y).forEach(d => { ell(d); g.fillStyle = inkStr; g.fill(); g.lineWidth = 5; g.strokeStyle = bgStr; g.stroke(); });
+          if (ls > .01) {
+            // the part of the letter inside its circle shows as a cut-out, so it reads as going in and coming out
+            const S = shape(L.ch), z = ZL * ls, X = lx - (S.l + S.r) / 2 * z, Y = ly - (S.t + S.d) / 2 * z;
+            g.globalAlpha = la; g.fillStyle = inkStr; glyph(S, X, Y, z);
+            g.save(); base(); ell(discs[under]); g.clip(); g.fillStyle = bgStr; glyph(S, X, Y, z); g.restore(); g.globalAlpha = 1;
+          }
+          if (state === 'reveal') { const e = clock - at, ok = picked === under; txt(ok ? 'Got it.' : 'It was this one.', discs[under].x, cy + rD * 1.6, phone ? 15 : 17, { w: 600, a: clamp((e - .15) * 5, 0, 1) }); }
+          if (!done) hud(state === 'pick' ? `Which one? · ${wins} in a row` : `${wins} in a row`);
+        },
+      };
+      return o;
+    },
+
+    king(ws) {
+      // keep the crown on the k: it balances on the tip, and you move the k under it
+      const phone = W < 760, K = ws[0], S = Math.min(phone ? 1.15 : .7, (rackY0 - rs * fs - topSafe - 40) / (1.55 * fs)), Z = S * fs, C = new Path2D('M-.46 -.04Q-.54 -.3 -.58 -.5Q-.4 -.34 -.24 -.2Q-.12 -.42 0 -.62Q.12 -.42 .24 -.2Q.4 -.34 .58 -.5Q.54 -.3 .46 -.04Q0 .04 -.46 -.04Z');
+      // the lean grows on its own; moving toward the lean pushes it back, harder the faster you go
+      const by = (topSafe + rackY0) / 2 + Z * .35, sz = Z * .42, ARM = Z * 1.5, GL = phone ? 2.8 : 3.2, DAMP = 2.5, PUSH = 3, KF = 250, VM = Z * 10, court = letters.filter(l => l !== K), WIN = 30;
+      toRack(court);
+      K.ts = S; K.ta = 0; K.k = 900; K.c = 40;
+      let bx = W / 2, bv = 0, th = rand(-.05, .05) || .03, om = 0, kickAt = 1.4, done = false, fall = null, tx = W / 2;
+      const pivot = () => [bx + (K.S.l + .12) * Z, by + K.S.t * Z];
+      function topple(t, won) {
+        done = true; const [px, py] = pivot();
+        if (!won) { fall = { x: px, y: py, vx: bv * .4 + Math.sin(th) * 380, vy: -160, a: th, va: Math.sign(th) * 5 }; shake = 6; }
+        const s = +t.toFixed(1); o.say = won ? `Long live the k. Thirty seconds.${best('king', WIN)}` : `The crown fell after ${s} seconds.${best('king', s)}`; o.dur = t + 1.5;
+      }
+      const o = {
+        dur: Infinity, peek: () => ({ th, om, bx, bv, by, done }),
+        tap() {}, key() {},
+        step(h, t) {
+          court.forEach((L, i) => { L.ta = Math.pow(Math.max(0, Math.sin(t * 2.4 - i * .22)), 2) * .45 * (L.tx < W / 2 ? 1 : -1); });
+          if (fall) { fall.vy += 2400 * h; fall.x += fall.vx * h; fall.y += fall.vy * h; fall.a += fall.va * h; }
+          if (!done) {
+            if (ptr.on && ptr.x > -1e3) tx = clamp(ptr.x, Z * .6, W - Z * .6);
+            bv = clamp(bv + ((tx - bx) * KF - bv * 2 * Math.sqrt(KF)) * h, -VM, VM); bx = clamp(bx + bv * h, Z * .6, W - Z * .6);
+            om += (GL * Math.sin(th) - DAMP * om - clamp(bv / ARM, -2.5, 2.5) * PUSH * Math.cos(th)) * h; th += om * h;
+            if (t > kickAt) { kickAt = t + rand(1.1, 2.2); om += rand(-1, 1) * (.25 + t * .025); }
+            if (Math.abs(th) > .9) topple(t, false); else if (t >= WIN) topple(t, true);
+          }
+          put(K, bx, by, 0);
+        },
+        over(t) {
+          let x, y, a;
+          if (fall) { x = fall.x; y = fall.y; a = fall.a; } else { [x, y] = pivot(); a = th; }
+          T(x, y, a, sz); g.fillStyle = g.strokeStyle = '#f2c53d'; g.lineJoin = 'round'; g.lineWidth = .09; g.fill(C); g.stroke(C);
+          if (!done) hud(`${Math.floor(t)} of 30 seconds`);
+        },
+      };
+      return o;
+    },
+
+    art() {
+      // two paintings that should match; find what's different. Four in each, in a busier scene
+      offstage(letters);
+      const phone = W < 760, DUR = 40, PER = 4, wide = W / H > 1.05, aT = topSafe + (phone ? 26 : 30), aB = dockTop - (phone ? 22 : 36), marks = [], misses = [], INK = '#1a1916', RING = '#b5121b';
+      let fw, fh, F;
+      if (wide) { fw = Math.min((W - 100) / 2, (aB - aT) / .8, 560); fh = fw * .8; const y = (aT + aB) / 2 - fh / 2; F = [[W / 2 - fw - 20, y], [W / 2 + 20, y]]; }
+      else { fh = Math.min((aB - aT - 22) / 2, (W - 36) * .8); fw = fh / .8; if (fw > W - 36) { fw = W - 36; fh = fw * .8; } const y = (aT + aB) / 2 - fh - 11; F = [[W / 2 - fw / 2, y], [W / 2 - fw / 2, y + fh + 22]]; }
+      let found = 0, pen = 0, done = false, A = null, B = null, diffs = [], nextAt = 0;
+      const KINDS = ['L0', 'L1', 'L2', 'sun-off', 'sun-move', 'sun-blue', 'cloud-off', 'cloud-move', 'bird-off', 'bird-add', 'hz', 'sig', 'star', 'tree-off', 'tree-autumn', 'tree-tall', 'win', 'roof', 'door', 'chim', 'flower-off', 'flower-color', 'boat'];
+      function round() {
+        A = { L: ['a', 'r', 't'].map((ch, i) => ({ ch, x: .36 + i * .145 + rand(-.015, .015), y: .62 + rand(-.02, .02), s: .2, a: rand(-.08, .08), sx: 1, w: REST })),
+          sun: { x: rand(.6, .7), y: rand(.15, .21), r: .055, c: '#e8742c', on: true },
+          clouds: [{ x: rand(.15, .2), y: .14, w: .13, on: true }, { x: rand(.4, .45), y: .085, w: .1, on: true }],
+          birds: [{ x: .29, y: .28, on: true }, { x: .35, y: .24, on: true }, { x: .5, y: .3, on: true }], bird4: false,
+          hz: .92, tree: { on: true, c: '#4f8a4b', h: .2 }, house: { win: '#f2c53d', roof: '#5a4636', door: true, chim: true },
+          flowers: [['#e43f7f', .3], ['#f2c230', .43], ['#2a5fd8', .56], ['#e43f7f', .68]].map(([c, x]) => ({ x, c, on: true })),
+          sig: true, star: false, boat: false };
+        B = JSON.parse(JSON.stringify(A)); diffs = []; marks.length = 0;
+        const used = new Set(), add = at => diffs.push({ at, got: false });
+        while (diffs.length < PER) {
+          const kind = pick(KINDS), grp = kind.split('-')[0]; if (used.has(grp)) continue; used.add(grp);
+          if (kind[0] === 'L') {
+            const i = +kind[1], l = B.L[i], how = pick(['rot', 'flip', 'heavy', 'up', 'big']);
+            if (how === 'rot') l.a += .34; else if (how === 'flip') l.sx = -1; else if (how === 'heavy') l.w = .95; else if (how === 'up') l.y -= .08; else l.s *= 1.3;
+            add([[A.L[i].x, A.L[i].y - .02], [l.x, l.y - .02]]);
+          }
+          else if (kind === 'sun-off') { B.sun.on = false; add([[A.sun.x, A.sun.y]]); }
+          else if (kind === 'sun-move') { B.sun.x += .1; add([[A.sun.x, A.sun.y], [B.sun.x, B.sun.y]]); }
+          else if (kind === 'sun-blue') { B.sun.c = '#3b6fd8'; add([[A.sun.x, A.sun.y]]); }
+          else if (kind === 'cloud-off') { const c = B.clouds[Math.floor(rand(0, 2))]; c.on = false; add([[c.x, c.y]]); }
+          else if (kind === 'cloud-move') { const i = Math.floor(rand(0, 2)), c = B.clouds[i]; c.x += .08; add([[A.clouds[i].x, c.y], [c.x, c.y]]); }
+          else if (kind === 'bird-off') { const b = B.birds[Math.floor(rand(0, 3))]; b.on = false; add([[b.x, b.y - .01]]); }
+          else if (kind === 'bird-add') { B.bird4 = true; add([[.43, .34]]); }
+          else if (kind === 'hz') { B.hz = .62; add([[.7, .8]]); }
+          else if (kind === 'sig') { B.sig = false; add([[.88, .9]]); }
+          else if (kind === 'star') { B.star = true; add([[.53, .1]]); }
+          else if (kind === 'tree-off') { B.tree.on = false; add([[.12, .62]]); }
+          else if (kind === 'tree-autumn') { B.tree.c = '#d98a2b'; add([[.12, .55]]); }
+          else if (kind === 'tree-tall') { B.tree.h = .27; add([[.12, .55]]); }
+          else if (kind === 'win') { B.house.win = '#2b2a33'; add([[.825, .71]]); }
+          else if (kind === 'roof') { B.house.roof = '#2f5fa8'; add([[.86, .61]]); }
+          else if (kind === 'door') { B.house.door = false; add([[.885, .76]]); }
+          else if (kind === 'chim') { B.house.chim = false; add([[.905, .58]]); }
+          else if (kind === 'flower-off') { const f = B.flowers[Math.floor(rand(0, 4))]; f.on = false; add([[f.x, .9]]); }
+          else if (kind === 'flower-color') { const f = B.flowers[Math.floor(rand(0, 4))]; f.c = f.c === '#2a5fd8' ? '#f2c230' : '#2a5fd8'; add([[f.x, .9]]); }
+          else if (kind === 'boat') { B.boat = true; add([[.25, .77]]); }
+        }
+      }
+      function painting([fx, fy], c) {
+        base(); g.save(); g.shadowColor = 'rgba(30,20,10,.28)'; g.shadowBlur = 28; g.shadowOffsetY = 12; g.fillStyle = '#fbf9f3'; g.fillRect(fx, fy, fw, fh); g.restore();
+        base(); const bw = Math.max(6, fw * .03); g.strokeStyle = '#2c1d11'; g.lineWidth = bw; g.strokeRect(fx, fy, fw, fh);
+        g.strokeStyle = '#a98b5d'; g.lineWidth = 1.5; g.strokeRect(fx + bw * .9, fy + bw * .9, fw - bw * 1.8, fh - bw * 1.8);
+        const X = u => fx + u * fw, Y = v => fy + v * fh, lw = Math.max(1.5, fw * .006), dot = (x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
+        g.lineCap = 'round'; g.lineJoin = 'round';
+        if (c.sun.on) { g.fillStyle = c.sun.c; dot(X(c.sun.x), Y(c.sun.y), c.sun.r * fw); }
+        g.fillStyle = '#c3ceda'; c.clouds.forEach(cl => { if (!cl.on) return; g.beginPath(); [[-.32, .1, .3], [0, 0, .42], [.32, .08, .3]].forEach(([dx, dy, r]) => { const x = X(cl.x + dx * cl.w), y = Y(cl.y) + dy * cl.w * fw, rr = r * cl.w * fw; g.moveTo(x + rr, y); g.arc(x, y, rr, 0, TAU); }); g.fill(); });
+        g.strokeStyle = INK; g.lineWidth = lw;
+        g.beginPath(); g.moveTo(X(.08), Y(.8)); g.lineTo(X(c.hz), Y(.8)); g.stroke();
+        const bird = (x, y) => { const s = fw * .022; g.beginPath(); g.moveTo(X(x) - s, Y(y) - s * .4); g.quadraticCurveTo(X(x) - s * .4, Y(y) - s * .8, X(x), Y(y)); g.quadraticCurveTo(X(x) + s * .4, Y(y) - s * .8, X(x) + s, Y(y) - s * .4); g.stroke(); };
+        c.birds.forEach(b => { if (b.on) bird(b.x, b.y); }); if (c.bird4) bird(.43, .34);
+        if (c.star) { g.fillStyle = INK; dot(X(.53), Y(.1), fw * .011); }
+        if (c.boat) { g.fillStyle = INK; g.beginPath(); g.moveTo(X(.2), Y(.785)); g.lineTo(X(.3), Y(.785)); g.lineTo(X(.28), Y(.8)); g.lineTo(X(.22), Y(.8)); g.closePath(); g.fill(); g.beginPath(); g.moveTo(X(.25), Y(.785)); g.lineTo(X(.25), Y(.72)); g.lineTo(X(.285), Y(.775)); g.closePath(); g.fill(); }
+        if (c.tree.on) { const x = X(.12), y1 = Y(.8 - c.tree.h); g.strokeStyle = '#5b4632'; g.lineWidth = fw * .014; g.lineCap = 'butt'; g.beginPath(); g.moveTo(x, Y(.8)); g.lineTo(x, y1); g.stroke(); g.lineCap = 'round'; g.fillStyle = c.tree.c; dot(x, y1 - fw * .02, fw * .062); g.strokeStyle = INK; g.lineWidth = lw; }
+        // the house on the right
+        const hc = c.house; g.fillStyle = '#5a4636';
+        if (hc.chim) g.fillRect(X(.895), Y(.55), fw * .022, Y(.64) - Y(.55));
+        g.fillStyle = hc.roof; g.beginPath(); g.moveTo(X(.775), Y(.665)); g.lineTo(X(.86), Y(.565)); g.lineTo(X(.945), Y(.665)); g.closePath(); g.fill();
+        g.fillStyle = '#eadfc4'; g.fillRect(X(.79), Y(.665), X(.93) - X(.79), Y(.8) - Y(.665)); g.strokeRect(X(.79), Y(.665), X(.93) - X(.79), Y(.8) - Y(.665));
+        g.fillStyle = hc.win; g.fillRect(X(.808), Y(.69), fw * .034, fh * .045); g.strokeRect(X(.808), Y(.69), fw * .034, fh * .045);
+        if (hc.door) { g.fillStyle = '#5a4636'; g.fillRect(X(.872), Y(.72), fw * .03, Y(.8) - Y(.72)); }
+        c.flowers.forEach(f => { if (!f.on) return; g.strokeStyle = '#4f8a4b'; g.lineWidth = lw; g.beginPath(); g.moveTo(X(f.x), Y(.95)); g.lineTo(X(f.x), Y(.9)); g.stroke(); g.fillStyle = f.c; dot(X(f.x), Y(.9), fw * .013); });
+        g.strokeStyle = INK; g.lineWidth = lw;
+        if (c.sig) { g.beginPath(); g.moveTo(X(.83), Y(.91)); g.bezierCurveTo(X(.85), Y(.85), X(.87), Y(.96), X(.9), Y(.89)); g.lineTo(X(.93), Y(.91)); g.stroke(); }
+        g.fillStyle = INK; c.L.forEach(l => glyph(shape(l.ch), X(l.x), Y(l.y), l.s * fw, l.a, l.sx, l.w));
+        base();
+      }
+      round();
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ found, pen, frames: F, fw, fh, diffs: diffs.map(d => ({ at: d.at, got: d.got })) }),
+        key() {},
+        tap(x, y) {
+          if (done || nextAt) return;
+          const fi = F.findIndex(([fx, fy]) => x > fx && x < fx + fw && y > fy && y < fy + fh); if (fi < 0) return;
+          const [fx, fy] = F[fi], ux = (x - fx) / fw, uy = (y - fy) / fh, rad = Math.max(24, fw * .075);
+          let d = null, bd = 1e9;
+          diffs.forEach(df => { if (df.got) return; df.at.forEach(([px, py]) => { const q = Math.hypot((ux - px) * fw, (uy - py) * fh); if (q < rad && q < bd) { bd = q; d = df; } }); });
+          if (!d) { pen += 2; misses.push({ x, y, t: clock }); shake = 4; return; }
+          d.got = true; found++; marks.push(d); shake = 2;
+          if (diffs.every(df => df.got)) nextAt = clock + .8;
+        },
+        step(h, t) {
+          if (done) return;
+          if (nextAt && clock > nextAt) { nextAt = 0; round(); }
+          if (t + pen > DUR) { done = true; o.say = found ? `${Num(found)} found.${best('art', found)}` : 'Nothing found. They looked the same to you too.'; o.dur = t + 1.4; }
+        },
+        over(t) {
+          painting(F[0], A); painting(F[1], B);
+          base(); g.strokeStyle = RING; g.lineWidth = 3;
+          F.forEach(([fx, fy], k) => { g.save(); g.beginPath(); g.rect(fx, fy, fw, fh); g.clip(); marks.forEach(d => { const [px, py] = d.at[Math.min(k, d.at.length - 1)]; g.beginPath(); g.arc(fx + px * fw, fy + py * fh, Math.max(20, fw * .065), 0, TAU); g.stroke(); }); g.restore(); });
+          misses.forEach(m => { const u = (clock - m.t) / .6; if (u >= 1) return; g.globalAlpha = 1 - u; g.strokeStyle = inkStr; g.lineWidth = 3; const s = 9; g.beginPath(); g.moveTo(m.x - s, m.y - s); g.lineTo(m.x + s, m.y + s); g.moveTo(m.x + s, m.y - s); g.lineTo(m.x - s, m.y + s); g.stroke(); g.globalAlpha = 1; });
+          if (!done) hud(`${found} found · ${diffs.filter(d => !d.got).length} left in this one · ${Math.max(0, Math.ceil(DUR - t - pen))}`);
+        },
+      };
+      return o;
+    },
+
+    bargain(ws, rest) {
+      // the price keeps falling; buy it before one of them does
+      const phone = W < 760, ROUNDS = 3, cx = W / 2, tw = phone ? Math.min(W * .62, 240) : 300, th = tw * .62, ty0 = topSafe + 86, floorY = ty0 + th + (phone ? 80 : 96);
+      const shop = rest.slice(), half = Math.ceil(shop.length / 2), SS = phone ? .34 : .28, gapS = SS * fs * .62;
+      lineUp(ws, Math.min(.14, W * .4 / (lineEm('bargain') * fs)), cx, floorY + SS * fs + (phone ? 30 : 40));
+      shop.forEach(L => { L.ts = SS; L.ta = 0; L.k = 260; L.c = 20; });
+      let r = 0, t0 = 0, sellAt = 0, gam = 1, state = 'wait', price = 100, saved = 0, done = false, at = clock, qd = 0, stampAt = 0, last = 0;
+      const el = () => clock - t0, priceAt = e => Math.max(1, Math.ceil(100 * (1 - e / 6)));
+      function start() { state = 'run'; t0 = clock; sellAt = rand(1.5, 5.4); gam = rand(.6, 1.7); price = 100; }
+      function buy() { if (state !== 'run' || done) return; state = 'bought'; at = stampAt = clock; last = 100 - price; saved += last; }
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ r, state, price, saved, sellAt, el: state === 'run' ? el() : 0 }),
+        tap() { buy(); }, key(ch) { if (ch === ' ') buy(); },
+        step(h, t) {
+          if (!done) {
+            if (state === 'wait' && clock - at > .7) start();
+            if (state === 'run') { price = priceAt(el()); if (el() >= sellAt) { state = 'sold'; at = stampAt = clock; last = 0; shake = 6; const L = pick(shop); L.vy -= 420; L.calm = false; } }
+            if ((state === 'sold' || state === 'bought') && clock - at > 1.5) {
+              r++;
+              if (r === ROUNDS) { done = true; o.say = saved ? `$${saved} saved on three.${best('bargain', saved)}` : 'Sold out. Every one.'; o.dur = t + 1.2; }
+              else { state = 'wait'; at = clock; price = 100; }
+            }
+          }
+          const q = state === 'run' ? Math.pow(clamp(el() / sellAt, 0, 1), gam) : state === 'sold' ? 1 : 0;
+          qd += (q - qd) * Math.min(1, h * (state === 'run' ? 10 : 3));
+          shop.forEach((L, i) => {
+            const left = i < half, j = left ? i : i - half, x0 = left ? -30 - j * gapS : W + 30 + j * gapS, x1 = left ? cx - 22 - j * gapS : cx + 22 + j * gapS;
+            L.tx = x0 + (x1 - x0) * qd; L.ty = floorY + (state === 'run' ? Math.sin(clock * 10 + i) * 3 : 0); L.ta = (left ? 1 : -1) * qd * .15;
+          });
+        },
+        over() {
+          base(); const sw = Math.sin(clock * 1.6) * .03;
+          g.save(); g.translate(cx, topSafe + 30); g.rotate(sw); g.translate(0, -(topSafe + 30));
+          g.strokeStyle = rgb(col.ink, .7); g.lineWidth = 2; g.beginPath(); g.moveTo(0, topSafe + 30); g.lineTo(0, ty0 + 18); g.stroke();
+          g.beginPath(); g.roundRect(-tw / 2, ty0, tw, th, 18); g.fillStyle = '#fffdf5'; g.fill(); g.lineWidth = 3; g.strokeStyle = inkStr; g.stroke();
+          g.beginPath(); g.arc(0, ty0 + 18, 7, 0, TAU); g.fillStyle = bgStr; g.fill(); g.lineWidth = 2; g.stroke();
+          g.fillStyle = inkStr; g.textAlign = 'center'; g.textBaseline = 'middle';
+          g.font = `500 ${phone ? 15 : 17}px General Sans, system-ui, sans-serif`; const yw = ty0 + th * .34; g.fillText('$100', 0, yw);
+          const ww = g.measureText('$100').width; g.lineWidth = 2; g.beginPath(); g.moveTo(-ww / 2 - 4, yw); g.lineTo(ww / 2 + 4, yw); g.stroke();
+          g.font = `700 ${phone ? 54 : 72}px Fraunces, Georgia, serif`; g.fillText(`$${price}`, 0, ty0 + th * .68);
+          if (state === 'sold' || state === 'bought') {
+            const u = easeBack(clamp((clock - stampAt) / .3, 0, 1)), sold = state === 'sold';
+            g.save(); g.translate(0, ty0 + th * .56); g.rotate(-.16); g.scale(u, u);
+            g.font = `700 ${phone ? 30 : 38}px General Sans, system-ui, sans-serif`; const label = sold ? 'Sold.' : `Yours. ${last}% off.`, lw2 = g.measureText(label).width + 30, lh2 = phone ? 50 : 60;
+            g.fillStyle = 'rgba(255,253,245,.92)'; g.beginPath(); g.roundRect(-lw2 / 2, -lh2 / 2, lw2, lh2, 10); g.fill(); g.strokeStyle = inkStr; g.lineWidth = 4; g.stroke();
+            g.fillStyle = inkStr; g.fillText(label, 0, 2); g.restore();
+          }
+          g.restore();
+          if (!done && (state === 'run' || state === 'wait')) { const n = 2 + Math.round(qd * 15); txt(qd > .6 ? `Only 1 left · ${n} people looking` : `${n} people are looking at this`, cx, ty0 + th + (phone ? 24 : 28), phone ? 14 : 15, { w: 500, a: .92 }); }
+          if (!done) hud(`Deal ${Math.min(r + 1, ROUNDS)} of ${ROUNDS} · $${saved} saved`);
+        },
+      };
+      return o;
+    },
+
+    pink(ws) {
+      // pinking shears: trace the zigzag through the word, and the word comes apart along your cut
+      const phone = W < 760, ROUNDS = 3, em = lineEm(wordOf(ws)), S = Math.min(ws[0].ts, W * .82 / (em * fs), (rackY0 - topSafe - 60) / (1.15 * fs)), cy = (topSafe + rackY0) / 2, Z = S * fs, TOL = phone ? 24 : 20;
+      lineUp(ws, S, W / 2, cy);
+      const xa = W / 2 - em * Z / 2 - (phone ? 22 : 40), xb = W / 2 + em * Z / 2 + (phone ? 22 : 40), scores = [];
+      let r = 0, pts = [], segL = [], total = 1, prog = 0, err = 0, errN = 0, pen = false, state = 'ready', at = clock, seg = 1, trail = [], done = false, score = 0, idle = clock;
+      function build() {
+        const A = Math.max(10, Z * (.07 + r * .03)), P = Math.max(26, Z * (.3 - r * .05)), wave = r === 2 ? Z * .12 : 0;
+        pts = []; let k = 0; for (let x = xa; x <= xb + .1; x += P / 2, k++) pts.push([x, cy + (k % 2 ? A : -A) + Math.sin((x - xa) / (xb - xa) * TAU) * wave]);
+        segL = [0]; for (let i = 1; i < pts.length; i++) segL.push(segL[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); total = segL[segL.length - 1];
+        prog = 0; err = 0; errN = 0; seg = 1; trail = []; state = 'ready'; idle = clock; ws.forEach(L => { L.zig = 0; L.cutAt = 0; });
+      }
+      function near(x, y) { // the nearest point on the path, from a little behind where you are to a little ahead
+        let bd = 1e9, bs = prog;
+        for (let i = Math.max(1, seg - 1); i < Math.min(pts.length, seg + 4); i++) {
+          const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy, u = clamp(((x - x0) * dx + (y - y0) * dy) / l2, 0, 1), d = Math.hypot(x0 + dx * u - x, y0 + dy * u - y);
+          if (d < bd) { bd = d; bs = segL[i - 1] + u * Math.sqrt(l2); }
+        }
+        return [bd, bs];
+      }
+      function finish(slip) {
+        pen = false; const frac = prog / total, acc = errN ? clamp(1 - (err / errN) / TOL, 0, 1) : 0;
+        score = Math.round(frac * acc * 100); scores.push(score); state = slip ? 'slip' : 'result'; at = clock;
+      }
+      build();
+      const o = {
+        dur: Infinity, cursor: 'crosshair', peek: () => ({ r, state, prog, total, start: pts[0], pts, scores }),
+        key() {},
+        tap(x, y) { if (state !== 'ready' || done) return; if (Math.hypot(x - pts[0][0], y - pts[0][1]) < (phone ? 44 : 34)) { pen = true; state = 'cut'; trail = [[x, y]]; idle = clock; } },
+        lift() { if (pen) finish(false); },
+        step(h, t) {
+          if (done) return;
+          if (pen && ptr.x > -1e3) {
+            const [d, s] = near(ptr.x, ptr.y);
+            if (s > prog) { err += d * (s - prog); errN += s - prog; prog = s; while (seg < pts.length - 1 && segL[seg] < prog) seg++; }
+            trail.push([ptr.x, ptr.y]);
+            if (d > TOL * 3.2) finish(true); else if (prog >= total - 6) finish(false);
+          }
+          const xAt = pts[0][0] + (pts[pts.length - 1][0] - pts[0][0]) * (prog / total);
+          ws.forEach(L => {
+            if (!L.cutAt && state !== 'ready' && xAt > L.x) L.cutAt = clock;
+            if (L.cutAt) L.zig = .011 * easeIO(clamp((clock - L.cutAt) / .3, 0, 1));
+          });
+          if ((state === 'result' || state === 'slip') && clock - at > 1.3) {
+            r++;
+            if (r === ROUNDS) { done = true; const avg = Math.round(scores.reduce((a, b) => a + b, 0) / ROUNDS); o.say = `${avg}% on the line.${best('pink', avg)}`; o.dur = t + 1.2; }
+            else build();
+          }
+          if (state === 'ready' && clock - idle > 12) { done = true; o.say = 'Never mind.'; o.dur = t + .2; }
+        },
+        over() {
+          base(); g.lineCap = g.lineJoin = 'round';
+          const path = () => { g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); };
+          path(); g.strokeStyle = rgb(col.bg, .85); g.lineWidth = 4; g.stroke();
+          g.setLineDash([6, 7]); g.strokeStyle = rgb(col.ink, .55); g.lineWidth = 2; g.stroke(); g.setLineDash([]);
+          if (trail.length > 1) {
+            const tp = () => { g.beginPath(); trail.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); };
+            tp(); g.strokeStyle = rgb(col.ink, .5); g.lineWidth = 2; g.stroke();
+            g.save(); letterPath(ws); g.clip(); base(); tp(); g.strokeStyle = bgStr; g.lineWidth = phone ? 4 : 3.5; g.stroke(); g.restore();
+          }
+          if (state === 'ready') { const [x, y] = pts[0], pu = 1 + Math.sin(clock * 4) * .12; g.fillStyle = inkStr; g.beginPath(); g.arc(x, y, 9 * pu, 0, TAU); g.fill(); g.strokeStyle = rgb(col.ink, .5); g.lineWidth = 2; g.beginPath(); g.arc(x, y, 18 * pu, 0, TAU); g.stroke(); }
+          if (!done) hud(state === 'ready' ? `Cut ${r + 1} of ${ROUNDS} · start at the dot` : state === 'cut' ? `${Math.round(prog / total * 100)}%` : state === 'slip' ? `Slipped · ${score}%` : `${score}% on the line`);
+        },
+      };
+      return o;
+    },
+
+    nag() {
+      // popups, the real kind. Each has a way out, usually the small one; the big button only makes more
+      const phone = W < 760, MAX = phone ? 5 : 7, pw = phone ? Math.min(W - 56, 260) : 290, ups = [], P = 18;
+      const KINDS = [
+        { q: 'Have you subscribed yet?', y: 'Subscribe' },
+        { q: 'We value your privacy', b: 'We use cookies to make your visit better.', y: 'Accept all', n: 'Reject all' },
+        { q: 'This site wants to send you notifications', y: 'Allow', n: 'Not now' },
+        { q: 'Enjoying the site?', b: 'Leave us five stars.', y: 'Rate now', n: 'Maybe later' },
+        { q: 'Before you go…', b: 'Ten percent off your first newsletter.', y: 'Claim my discount', n: 'No thanks, I like paying full price' },
+        { q: 'Update available', b: 'Restart to finish installing.', y: 'Restart now', n: 'Later' },
+        { q: 'Still reading?', y: 'Yes, keep going' },
+        { q: 'Turn on location?', b: 'For a better experience.', y: 'Allow', n: 'Don’t allow' },
+        { q: 'Psst. The newsletter.', y: 'Tell me more' },
+        { q: 'Sign in to keep reading', b: 'It only takes a minute.', y: 'Sign in', n: 'Continue as guest' },
+      ];
+      const FQ = `600 ${phone ? 15 : 16}px General Sans, system-ui, sans-serif`, FBODY = `400 ${phone ? 13 : 14}px General Sans, system-ui, sans-serif`, FB = `600 ${phone ? 14 : 15}px General Sans, system-ui, sans-serif`, FN = `500 ${phone ? 12.5 : 13}px General Sans, system-ui, sans-serif`;
+      const tab = tabEls.find(el => el.dataset.s === 'newsletter');
+      let closed = 0, spawnAt = .2, done = false, note = null, lastK = -1;
+      homeAll();
+      const open = () => ups.filter(p => !p.out).length;
+      function wrap(s, font, max) { g.save(); g.font = font; const out = []; let line = ''; s.split(' ').forEach(w => { const t = line ? line + ' ' + w : w; if (line && g.measureText(t).width > max) { out.push(line); line = w; } else line = t; }); out.push(line); g.restore(); return out; }
+      const tw = (s, font) => { g.save(); g.font = font; const w = g.measureText(s).width; g.restore(); return w; };
+      function spawn() {
+        const busy = new Set(ups.filter(p => !p.out).map(p => p.k)); let k, tries = 0; do k = Math.floor(rand(0, KINDS.length)); while ((k === lastK || busy.has(k)) && tries++ < 40); lastK = k; const K = KINDS[k];
+        const ql = wrap(K.q, FQ, pw - P * 2 - (K.n ? 0 : 22)), bl = K.b ? wrap(K.b, FBODY, pw - P * 2) : [];
+        const nw = K.n ? tw(K.n, FN) : 0, below = K.n && nw > pw * .36; // a long way out goes in small print under the button
+        const by = P + ql.length * 21 + (bl.length ? 6 + bl.length * 18 : 0) + 14, ph = by + 40 + (below ? 30 : 0) + P - 4;
+        const bx = K.n && !below ? pw - P - (pw - P * 2) * .56 : P, bw = pw - P - bx;
+        const near = K.n ? (below ? { x: pw / 2, y: by + 40 + 19, w: nw + 16, h: 26 } : { x: P + nw / 2, y: by + 20, w: nw + 16, h: 34 }) : { x: pw - 18, y: 18, w: 34, h: 34 };
+        let px = 0, py = 0, least = Infinity;
+        for (let n = 0; n < 12; n++) {
+          const x = rand(12, Math.max(14, W - pw - 12)), y = rand(topSafe + 8, Math.max(topSafe + 10, dockTop - ph - 16)); let ov = 0;
+          ups.forEach(q => { if (q.out) return; ov += Math.max(0, Math.min(x + pw, q.x + pw) - Math.max(x, q.x)) * Math.max(0, Math.min(y + ph, q.y + q.ph) - Math.max(y, q.y)); });
+          if (ov < least) { least = ov; px = x; py = y; }
+        }
+        ups.push({ x: px, y: py, ph, k, K, ql, bl, by, bx, bw, below, near, t: clock, out: 0 });
+        if (tab && ups.length % 3 === 1) tab.animate([{ transform: 'none' }, { transform: 'translateY(-6px) rotate(-3deg)' }, { transform: 'none' }], { duration: 380 });
+      }
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ closed, open: open(), ups: ups.filter(p => !p.out).map(p => ({ x: p.x, y: p.y, w: pw, h: p.ph, cx: p.x + p.near.x, cy: p.y + p.near.y, kind: p.K.q })) }),
+        key() {},
+        tap(x, y) {
+          if (done) return;
+          for (let i = ups.length - 1; i >= 0; i--) {
+            const p = ups[i]; if (p.out) continue;
+            if (x < p.x || x > p.x + pw || y < p.y || y > p.y + p.ph) continue;
+            const lx = x - p.x, ly = y - p.y, n = p.near, pad = phone ? 6 : 2;
+            if (Math.abs(lx - n.x) < n.w / 2 + pad && Math.abs(ly - n.y) < n.h / 2 + pad) { p.out = .001; closed++; return; }
+            if (lx > p.bx && lx < p.bx + p.bw && ly > p.by && ly < p.by + 40) { spawn(); spawn(); note = { x, y, t: clock }; shake = 4; }
+            return; // the top one takes the tap
+          }
+        },
+        step(h, t) {
+          ups.forEach(p => { if (p.out) p.out += h; });
+          for (let i = ups.length - 1; i >= 0; i--) if (ups[i].out > .2) ups.splice(i, 1);
+          if (done) return;
+          if (t > spawnAt) { spawn(); spawnAt = t + Math.max(.16, 1.25 - t * .035); }
+          if (open() > MAX) { done = true; o.say = closed ? `${Num(closed)} closed. Then it won.${best('nag', closed)}` : 'It won.'; o.dur = t + 1.4; }
+        },
+        over() {
+          ups.forEach(p => {
+            const u = clamp((clock - p.t) / .28, 0, 1), s = p.out ? 1 - p.out / .2 * .3 : easeBack(u), a = p.out ? Math.max(0, 1 - p.out / .2) : Math.min(1, u * 3), K = p.K, ph = p.ph;
+            base(); g.save(); g.globalAlpha = a; g.translate(p.x + pw / 2, p.y + ph / 2); g.scale(s, s); g.translate(-pw / 2, -ph / 2);
+            g.shadowColor = 'rgba(20,16,40,.28)'; g.shadowBlur = 24; g.shadowOffsetY = 8; g.fillStyle = '#fffdf8'; g.beginPath(); g.roundRect(0, 0, pw, ph, 16); g.fill(); g.shadowColor = 'transparent';
+            g.fillStyle = inkStr; g.textAlign = 'left'; g.textBaseline = 'middle'; g.font = FQ; p.ql.forEach((l, i) => g.fillText(l, P, P + 10 + i * 21));
+            if (p.bl.length) { g.font = FBODY; g.fillStyle = rgb(col.ink, .72); p.bl.forEach((l, i) => g.fillText(l, P, P + p.ql.length * 21 + 15 + i * 18)); }
+            g.fillStyle = inkStr; g.beginPath(); g.roundRect(p.bx, p.by, p.bw, 40, 20); g.fill(); g.fillStyle = '#fffdf8'; g.textAlign = 'center'; g.font = FB; g.fillText(K.y, p.bx + p.bw / 2, p.by + 20);
+            if (K.n) {
+              const n = p.near; g.font = FN; g.fillStyle = rgb(col.ink, .66); g.fillText(K.n, n.x, n.y + 1);
+              const w = n.w - 16; g.strokeStyle = rgb(col.ink, .4); g.lineWidth = 1; g.beginPath(); g.moveTo(n.x - w / 2, n.y + 9); g.lineTo(n.x + w / 2, n.y + 9); g.stroke();
+            } else {
+              const xc = pw - 18, yc = 18; g.strokeStyle = rgb(col.ink, .55); g.lineWidth = 1.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(xc - 4.5, yc - 4.5); g.lineTo(xc + 4.5, yc + 4.5); g.moveTo(xc + 4.5, yc - 4.5); g.lineTo(xc - 4.5, yc + 4.5); g.stroke();
+            }
+            g.restore();
+          });
+          if (note && clock - note.t < 1) txt('Thanks! Here’s another.', note.x, note.y - 30 - (clock - note.t) * 20, phone ? 15 : 16, { w: 600, a: 1 - (clock - note.t) });
+          if (!done) hud(`${closed} closed · ${open()} open`);
+        },
+      };
+      return o;
+    },
+
+    atari() {
+      // Pong, first to three
+      offstage(letters);
+      const phone = W < 760, vert = W < H, z = Math.max(8, Math.round(Math.min(W, H) / 64)), WIN = 3;
+      const U0 = vert ? 14 : topSafe + 10, U1 = vert ? W - 14 : dockTop - 14, V0 = vert ? topSafe + 14 : 24, V1 = vert ? dockTop - 18 : W - 24;
+      const PL = Math.max(3, Math.round((U1 - U0) * (vert ? .24 : .2) / z)) * z, xy = (u, v) => vert ? [u, v] : [v, u], sp0 = (V1 - V0) * (vert ? .75 : .62), sn = q => Math.round(q / z) * z;
+      const FONT = ['111101101101111', '010110010010111', '111001111100111', '111001111001111'];
+      let pu = (U0 + U1) / 2, cu = pu, bu = pu, bv = (V0 + V1) / 2, vu = 0, vv = 0, sp = sp0, me = 0, cpu = 0, serveAt = .9, toward = 1, done = false, err = 0;
+      function serve() { bu = (U0 + U1) / 2; bv = (V0 + V1) / 2; sp = sp0; const a = rand(-.5, .5); vv = toward * sp * Math.cos(a); vu = sp * Math.sin(a); serveAt = 0; }
+      function paddle(p, dir) { sp = Math.min(sp * 1.06, sp0 * 2.2); const a = clamp((bu - p) / (PL / 2), -1, 1); vv = dir * sp * Math.cos(a); vu = sp * Math.sin(a); shake = 2; }
+      function point(mine, t) {
+        if (mine) me++; else cpu++; toward = mine ? -1 : 1;
+        if (me === WIN || cpu === WIN) { done = true; o.say = me > cpu ? `You win, ${me}–${cpu}.${best('atari', me - cpu)}` : `The computer wins, ${cpu}–${me}.`; o.dur = t + 1.6; }
+        else serveAt = t + .8;
+      }
+      function digit(n, x, y, q) { const s = FONT[n] || FONT[0]; for (let i = 0; i < 15; i++) if (s[i] === '1') g.fillRect(x + (i % 3) * q, y + Math.floor(i / 3) * q, q, q); }
+      const o = {
+        dur: Infinity, cursor: 'none', peek: () => ({ me, cpu, pu, cu, bu, bv, vu, vv, vert, U0, U1, V0, V1, PL }),
+        tap() {}, key() {},
+        step(h, t) {
+          const want = ptr.x > -1e3 ? (vert ? ptr.x : ptr.y) : pu;
+          if (ptr.on || !touch) pu += (clamp(want, U0 + PL / 2, U1 - PL / 2) - pu) * Math.min(1, h * 20);
+          if (done) return;
+          if (serveAt) { if (t > serveAt) serve(); else return; }
+          const aim = vv < 0 ? bu + err : (U0 + U1) / 2, cmax = (U1 - U0) * (vert ? 1 : .95) * (.8 + .1 * me);
+          cu = clamp(cu + clamp(aim - cu, -cmax * h, cmax * h), U0 + PL / 2, U1 - PL / 2);
+          bu += vu * h; bv += vv * h;
+          if (bu < U0 + z / 2) { bu = U0 + z / 2; vu = Math.abs(vu); }
+          if (bu > U1 - z / 2) { bu = U1 - z / 2; vu = -Math.abs(vu); }
+          if (vv > 0 && bv + z / 2 >= V1 - z && bv < V1 + z && Math.abs(bu - pu) < PL / 2 + z / 2) { bv = V1 - z * 1.5; paddle(pu, -1); }
+          if (vv < 0 && bv - z / 2 <= V0 + z && bv > V0 - z && Math.abs(bu - cu) < PL / 2 + z / 2) { bv = V0 + z * 1.5; paddle(cu, 1); err = rand(-.6, .6) * PL; }
+          if (bv > V1 + z * 3) point(false, t); else if (bv < V0 - z * 3) point(true, t);
+        },
+        over(t) {
+          base(); g.fillStyle = rgb(col.ink, .6);
+          for (let u = U0; u < U1; u += z * 2) { const [x, y] = xy(u, (V0 + V1) / 2); g.fillRect(sn(x) - (vert ? 0 : z / 4), sn(y) - (vert ? z / 4 : 0), vert ? z : z / 2, vert ? z / 2 : z); }
+          const q = Math.max(4, Math.round(z * .7)), mid = (V0 + V1) / 2, [ax, ay] = xy(U0 + (U1 - U0) * .1, mid - q * 7), [bx2, by2] = xy(U0 + (U1 - U0) * .1, mid + q * 2.5);
+          g.fillStyle = rgb(col.ink, .9); digit(cpu, sn(ax), sn(ay), q); digit(me, sn(bx2), sn(by2), q);
+          g.fillStyle = inkStr;
+          const pad = (u, v) => { const [x, y] = xy(u - PL / 2, v - z / 2); g.fillRect(sn(x), sn(y), vert ? PL : z, vert ? z : PL); };
+          pad(pu, V1 - z / 2); pad(cu, V0 + z / 2);
+          if (!serveAt || t > serveAt - .3) { const [x, y] = xy(bu, bv); g.fillRect(sn(x - z / 2), sn(y - z / 2), z, z); }
+        },
+      };
+      return o;
+    },
+
+    grain(ws) {
+      // hold to pour; sand still in the air counts, so let go early. Fill each letter to the top without spilling
+      const phone = W < 760, order = ws.slice(), N = order.length, SAND = '#b8893c', scores = [];
+      toRack(letters);
+      const top = topSafe + 34, floorY = rackY0 - rs * fs * .9 - 26, Zl = Math.max(60, Math.min(W * (phone ? .62 : .32), (floorY - top - 70) / 1.05)), cx = W / 2, spout = top + 4;
+      let j = -1, S = null, prof = null, hpx = 0, topW = 0, total = 1, V = 0, pour = false, flying = [], spill = [], state = 'ready', at = clock, done = false, emit = 0, vol = 0, x0 = 0, y0 = 0, score = 0;
+      function setup() {
+        if (j >= 0) order[j].hide = false;
+        j++; if (j === N) { done = true; const avg = Math.round(scores.reduce((a, b) => a + b, 0) / N); o.say = `${avg}% full on average.${best('grain', avg)}`; o.dur = clock - fxT + 1.2; S = null; return; }
+        const L = order[j]; L.hide = true; S = L.S; x0 = cx; y0 = floorY - S.d * Zl;
+        // how much of the letter sits at each height, from the foot up, so the sand rises with the volume poured
+        hpx = Math.ceil((S.d - S.t) * Zl) + 2; const wpx = Math.ceil((S.r - S.l) * Zl) + 2, oc = document.createElement('canvas'); oc.width = wpx; oc.height = hpx;
+        const c = oc.getContext('2d', { willReadFrequently: true }); c.setTransform(Zl, 0, 0, Zl, -S.l * Zl + 1, -S.t * Zl + 1); c.fill(S.path);
+        const d = c.getImageData(0, 0, wpx, hpx).data; prof = new Float32Array(hpx + 1);
+        for (let k = 1; k <= hpx; k++) { const yr = hpx - k; let n = 0; for (let x = 0; x < wpx; x++) if (d[(yr * wpx + x) * 4 + 3] > 128) n++; prof[k] = prof[k - 1] + n; }
+        topW = y0 + S.t * Zl - 1; total = Math.max(1, prof[hpx]); V = 0; flying = []; spill = []; pour = false; state = 'ready'; at = clock; emit = 0;
+        vol = total / (150 * Math.max(1.5, 3 - j * .3));
+      }
+      const levelAt = v => { let k = 0; while (k < hpx && prof[k] < v) k++; return topW + hpx - k; };
+      const pct = () => Math.round(Math.min(V, total) / total * 100);
+      setup();
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ j, state, V, total, flying: flying.length, scores }),
+        key() {},
+        tap() { if (state === 'ready' && !done) { pour = true; state = 'pour'; } },
+        lift() { if (pour) { pour = false; state = 'settle'; } },
+        step(h, t) {
+          spill.forEach(p => { p.vy += 1800 * h; p.x += p.vx * h; p.y += p.vy * h; p.t += h; }); while (spill.length && spill[0].t > 1.2) spill.shift();
+          if (done || !S) return;
+          if (pour) { emit += 150 * h; while (emit >= 1) { emit--; flying.push({ x: cx + rand(-3, 3), y: spout + 12, vy: 80 }); } }
+          const lv = levelAt(V);
+          for (const p of flying) {
+            p.vy += 2200 * h; p.y += p.vy * h;
+            if (p.y >= lv) { p.dead = true; V += vol; if (V > total) spill.push({ x: cx + rand(-1, 1) * (S.r - S.l) * Zl * .4, y: topW, vx: rand(-260, 260), vy: rand(-200, 0), t: 0 }); }
+          }
+          for (let i = flying.length - 1; i >= 0; i--) if (flying[i].dead) flying.splice(i, 1);
+          if (V > total && state !== 'spilled') { state = 'spilled'; pour = false; at = clock; score = 0; scores.push(0); shake = 4; }
+          if (state === 'settle' && !flying.length) { state = 'result'; at = clock; score = pct(); scores.push(score); }
+          if ((state === 'result' || state === 'spilled') && clock - at > 1.2) setup();
+          if (state === 'ready' && clock - at > 12) { done = true; o.say = 'Never mind.'; o.dur = t + .2; }
+        },
+        over() {
+          base(); g.fillStyle = SAND;
+          spill.forEach(p => g.fillRect(p.x, p.y, 3, 3));
+          if (!S) return;
+          const lv = levelAt(Math.min(V, total));
+          g.setTransform(DPR * Zl, 0, 0, DPR * Zl, DPR * (x0 + shakeX), DPR * (y0 + shakeY)); g.lineJoin = 'round'; g.lineWidth = 5 / Zl; g.strokeStyle = inkStr; g.stroke(S.path);
+          g.fillStyle = bgStr; g.fill(S.path); g.fillStyle = rgb(col.ink, .07); g.fill(S.path);
+          g.save(); g.clip(S.path); base(); g.fillStyle = SAND; g.fillRect(0, lv, W, floorY - lv + 4); g.restore();
+          base(); g.fillStyle = SAND; flying.forEach(p => g.fillRect(p.x - 1.5, p.y, 3, 4));
+          g.fillStyle = inkStr; g.beginPath(); g.moveTo(cx - 16, spout - 8); g.lineTo(cx + 16, spout - 8); g.lineTo(cx + 4, spout + 10); g.lineTo(cx - 4, spout + 10); g.closePath(); g.fill();
+          if (!done) hud(state === 'ready' ? `${order[j].ch} · ${j + 1} of ${N} · hold to pour` : state === 'spilled' ? 'Spilled' : `${pct()}%`);
+        },
+      };
+      return o;
+    },
+
+    bang() {
+      // it goes off at full speed, then the blast hangs in slow motion; pull letters out before time catches up
+      const phone = W < 760, TB = .2, TS = .3, T1 = 7.2, cx = W / 2, cy = wordY, spots = rackLayout(), reach = Math.hypot(W, H), shards = [];
+      let caught = 0, lost = 0, done = false, gt = 0, sc = 1;
+      shake = 26;
+      // every letter flies about as far as it can go and still be on the page when the slow motion starts
+      const room = a => { const c = Math.cos(a), s = Math.sin(a), rx = c > 0 ? (W - 24 - cx) / c : c < 0 ? (cx - 24) / -c : 1e9, ry = s > 0 ? (dockTop - 20 - cy) / s : s < 0 ? (cy - topSafe - 40) / -s : 1e9; return Math.max(40, Math.min(rx, ry)); };
+      const REACH = TB + TS * .25; // how much game time the burst and the slow-down add up to
+      letters.forEach(L => {
+        const a = rand(0, TAU), sp = room(a) * rand(.35, .8) / REACH;
+        L.got = false; L.gone = false; L.bx = cx + Math.cos(a) * rand(6, 30); L.by = cy + Math.sin(a) * rand(6, 24); L.bvx = Math.cos(a) * sp; L.bvy = Math.sin(a) * sp; L.bva = rand(-6, 6); L.ts = phone ? .42 : .32; L.rigid = true;
+        put(L, L.bx, L.by, rand(-1, 1)); L.s = L.ts;
+      });
+      for (let k = 0; k < 26; k++) { const a = rand(0, TAU), v = rand(400, 1800); shards.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, a: rand(0, TAU), va: rand(-10, 10), r: rand(3, 8) }); }
+      const o = {
+        dur: Infinity, cursor: 'pointer', peek: () => ({ caught, lost, sc, live: letters.filter(L => !L.got && !L.gone).map(L => [L.x, L.y]) }),
+        end() { letters.forEach(L => { L.got = L.gone = false; L.pass = clock + .6; }); },
+        key() {},
+        tap(x, y, hit) {
+          if (done || clock - fxT < TB) return;
+          let L = hit && !hit.got && !hit.gone ? hit : null, bd = 1e9;
+          if (!L) letters.forEach(l => { if (l.got || l.gone) return; const d = Math.hypot(l.x - x, l.y - y) - .45 * l.s * fs; if (d < (phone ? 26 : 16) && d < bd) { bd = d; L = l; } });
+          if (!L) return;
+          L.got = true; caught++; L.tx = spots[L.i].x; L.ty = spots[L.i].y; L.ts = rs; L.ta = 0; L.pass = clock + 30; L.swell = clock + .35; L.rigid = false; normAngle(L); poke(L, x, y, 0, 1, 3);
+        },
+        step(h, t) {
+          // full speed for the bang, a hard brake into slow motion, then time slowly catches up
+          if (t < TB) sc = 1;
+          else if (t < TB + TS) { const u = (t - TB) / TS; sc = .03 + .97 * Math.pow(1 - u, 3); }
+          else sc = .03 + .97 * Math.pow(Math.min(1, (t - TB - TS) / T1), 3);
+          gt += sc * h;
+          shards.forEach(s => { s.x += s.vx * sc * h; s.y += s.vy * sc * h; s.a += s.va * sc * h; });
+          letters.forEach(L => {
+            if (L.got || L.gone) return;
+            L.bvy += 300 * sc * h; L.bx += L.bvx * sc * h; L.by += L.bvy * sc * h;
+            put(L, L.bx, L.by, L.a + L.bva * sc * h);
+            const m = L.s * fs * .6; if (L.bx < -m || L.bx > W + m || L.by < -m || L.by > H + m) { L.gone = true; lost++; L.hide = true; }
+          });
+          if (!done && caught + lost === 15) { done = true; o.say = caught === 15 ? `All fifteen, out of the blast.${best('bang', caught)}` : caught ? `${Num(caught)} of fifteen pulled out.${best('bang', caught)}` : 'None. Time caught up.'; o.dur = t + 1.4; }
+        },
+        under(t) {
+          const u = Math.min(1, t / .6), A = 1 - u; if (A <= 0) return;
+          base(); g.strokeStyle = rgb(col.ink, A * .45); g.lineWidth = 2 + 3 * A; g.beginPath(); g.arc(cx, cy, reach * .8 * Math.pow(u, .6), 0, TAU); g.stroke();
+        },
+        over(t) {
+          base(); g.fillStyle = inkStr; g.save(); g.beginPath(); g.rect(0, topSafe + 26, W, H); g.clip();
+          shards.forEach(s => { g.save(); g.translate(s.x, s.y); g.rotate(s.a); g.beginPath(); g.moveTo(-s.r, s.r * .6); g.lineTo(s.r, s.r * .4); g.lineTo(0, -s.r); g.closePath(); g.fill(); g.restore(); });
+          g.restore();
+          if (t < .14) { g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1 - t / .14; g.fillStyle = inkStr; g.fillRect(0, 0, cv.width, cv.height); g.globalAlpha = 1; }
+          if (!done && t > TB + TS * .5) hud(`${caught} out · ${15 - caught - lost} left`);
+        },
+      };
+      return o;
+    },
+  };
   const SECRETS = Object.keys(FX), SWEARS = new Set(['crap', 'prick', 'prat']);
   const ATTRACT = ['rain', 'trick', 'banana', 'train', 'art', 'grain', 'king', 'ink', 'brick', 'atari', 'bargain', 'big', 'paint', 'bang', 'panic'];
   /* ---- games wait for you: what to do, then a start button ---- */
@@ -2691,6 +3963,25 @@ const room = (() => {
     racing: { k: 'race2', t: 'Drag to steer. Dodge the letters coming down the road.', m: 'Move the mouse to steer. Dodge the letters coming down the road.', best: b => `${b} passed` },
     tank: { k: 'tank', t: 'Drag to aim, let go to fire. Farther from the tank is stronger. Five shells to knock down the wall.', m: 'Point to aim, click to fire. Farther from the tank is stronger. Five shells to knock down the wall.', best: b => `${b} down` },
     trap: { k: 'trap', t: 'Draw one loop around as many letters as you can. They scatter from the pen, and the ink runs out.', m: 'Draw one loop around as many letters as you can. They scatter from the pen, and the ink runs out.', best: b => `${b} in one loop` },
+    rain: { k: 'rain', t: 'Drag the umbrella under the cloud. It keeps growing, and the wind gusts. Ten drops soak a letter. Keep them dry for fifteen seconds.', m: 'Move the umbrella under the cloud. It keeps growing, and the wind gusts. Ten drops soak a letter. Keep them dry for fifteen seconds.', best: b => `${b} dry` },
+    banana: { k: 'banana2', t: 'The banana gets thrown up. Swipe across it between the letters, so every piece has one letter. Three bananas.', m: 'The banana gets thrown up. Hold the button and swipe across it between the letters, so every piece has one letter. Three bananas.', best: b => `${b} of 18 clean` },
+    brick: { k: 'brick', t: 'The crane swings each letter over the stack. Tap to drop it. Miss the one below and it’s over.', m: 'The crane swings each letter over the stack. Click or press Space to drop it. Miss the one below and it’s over.', best: b => `${b} high` },
+    panic: { k: 'panic', t: 'A ring closes on the circle. Tap as it lands, every time, until the panic is gone.', m: 'A ring closes on the circle. Click or press Space as it lands, every time, until the panic is gone.', best: b => `calm in ${b}s` },
+    train: { k: 'train', t: 'Tap to hop the t over one track. Get across and back without being hit. It speeds up.', m: 'Click or press Space to hop the t over one track. Get across and back without being hit. It speeds up.', best: b => `${b} across` },
+    paint: { k: 'paint2', t: 'A coloring book. Paint each letter in before its time runs out. Each one gets a little less.', m: 'A coloring book. Hold the button and drag to paint each letter in before its time runs out. Each one gets a little less.', best: b => b >= 5 ? 'all five' : `${b} of five` },
+    nap: { k: 'nap', t: 'They’re asleep. Carry the light across and back. Too fast near a letter wakes it.', m: 'They’re asleep. Carry the light across and back with the mouse. Too fast near a letter wakes it.', best: b => `${b} across` },
+    big: { k: 'big', t: 'A letter, far too close. It backs away until you can tell which one. Tap it early for more points. Five rounds.', m: 'A letter, far too close. It backs away until you can tell which one. Type it or click it early for more points.', best: b => `${b} points` },
+    ink: { k: 'ink', t: 'Ink spills from the letters. Tap a pool to blot it before ink covers half the page.', m: 'Ink spills from the letters. Click a pool to blot it before ink covers half the page.', best: b => `${b} blotted` },
+    prank: { k: 'prank', t: 'Tap the letters in order, p to n. Every fourth one, the page turns over.', m: 'Click the letters in order, p to n. Every fourth one, the page turns over.', best: b => `${b}s` },
+    trick: { k: 'trick', t: 'The letter sinks into one of three circles. Follow the shuffle, then tap the circle it’s in. Faster each round.', m: 'The letter sinks into one of three circles. Follow the shuffle, then click the circle it’s in. Faster each round.', best: b => `${b} in a row` },
+    king: { k: 'king', t: 'The crown balances on the k. Drag to keep the k under it. Thirty seconds and you win.', m: 'The crown balances on the k. Move the mouse to keep the k under it. Thirty seconds and you win.', best: b => `${b}s` },
+    art: { k: 'art', t: 'Two paintings that should match. Tap what’s different in either one, four in each. Wrong taps cost two seconds.', m: 'Two paintings that should match. Click what’s different in either one, four in each. Wrong clicks cost two seconds.', best: b => `${b} found` },
+    bargain: { k: 'bargain', t: 'The price keeps dropping. Tap to buy before someone else does. Three deals.', m: 'The price keeps dropping. Click or press Space to buy before someone else does. Three deals.', best: b => `$${b} saved` },
+    pink: { k: 'pink', t: 'Put your finger on the dot and trace the zigzag through the word. Three cuts, each harder.', m: 'Hold the button on the dot and trace the zigzag through the word. Three cuts, each harder.', best: b => `${b}%` },
+    nag: { k: 'nag', t: 'Popups. Find the way out of each one, usually the small one. The big button only makes more. Too many open and you lose.', m: 'Popups. Find the way out of each one, usually the small one. The big button only makes more. Too many open and you lose.', best: b => `${b} closed` },
+    atari: { k: 'atari', t: 'Pong. Drag to move your paddle. First to three.', m: 'Pong. Move the mouse to move your paddle. First to three.', best: b => `won by ${b}` },
+    grain: { k: 'grain', t: 'Hold to pour sand into each letter. Sand still falling counts, so let go early. Spill and that letter scores nothing.', m: 'Hold the button to pour sand into each letter. Sand still falling counts, so let go early. Spill and it scores nothing.', best: b => `${b}% full` },
+    bang: { k: 'bang', t: 'It goes off, then hangs in slow motion while time catches up. Tap letters to pull them out before they leave the page.', m: 'It goes off, then hangs in slow motion while time catches up. Click letters to pull them out before they leave the page.', best: b => `${b} of fifteen` },
   };
   function wrap(text, maxW) {
     const out = []; let line = '';
@@ -2725,7 +4016,7 @@ const room = (() => {
         g.restore();
       },
     };
-    function begin() { if (clock - fxT < .35 || fx !== o) return; fx = FX[w](ws, rest); fxT = clock; }
+    function begin() { if (clock - fxT < .35 || fx !== o) return; fx = (GAMES[w] || FX[w])(ws, rest); fxT = clock; }
     return o;
   }
 
