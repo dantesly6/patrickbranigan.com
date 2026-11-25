@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en" data-s="now">
+<html lang="en" data-s="now" class="sherbet">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#cdc7ef">
+<meta name="theme-color" content="#c6f1dd">
 <title>Patrick Branigan</title>
 <!--HEAD-->
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap">
@@ -684,7 +684,7 @@ const FAVS = {
   'NES': { title: 'Contra', alt: ['Super Mario Bros. 3', 'Mega Man 2'] },
   'Game Boy': { title: 'Tetris', alt: ['Pokémon Red', "Link's Awakening"], why: 'A game for literally anyone and everyone.' },
   'Genesis': { title: 'Sonic the Hedgehog 2', alt: ['Streets of Rage 2', 'Gunstar Heroes'] },
-  'SNES': { title: 'Donkey Kong Country', alt: ['Super Metroid', 'Super Mario World'] },
+  'SNES': { title: 'Contra III: The Alien Wars', alt: ['Super Metroid', 'Super Mario World'] },
   'N64': { title: 'The Legend of Zelda: Ocarina of Time', alt: ['Super Mario 64', 'GoldenEye 007'] },
   'GBC': { title: 'Mario Golf', alt: ['Pokémon Gold', "Link's Awakening DX"] },
   'Dreamcast': { title: 'Soulcalibur', alt: ['Jet Set Radio', 'Crazy Taxi'] },
@@ -712,7 +712,7 @@ const phoneQ = matchMedia('(max-width: 760px)');
 /* Kinetic type: every character rolls up out of its word. Lines are arrays
    of strings; line 2+ get the soft color. Calls done() after the old text
    has rolled away. */
-{ const pal = new URLSearchParams(location.search).get('palette'); if (['mono', 'bw', 'sherbet'].includes(pal)) document.documentElement.classList.add(pal); }
+{ const pal = new URLSearchParams(location.search).get('palette'), c = document.documentElement.classList; if (['mono', 'bw', 'classic'].includes(pal)) { c.remove('sherbet'); if (pal !== 'classic') c.add(pal); } }   // Sherbet is the default; ?palette=classic|mono|bw for the others
 const plainType = new URLSearchParams(location.search).get('type') === 'sans';
 if (plainType) document.documentElement.classList.add('sans');
 /* Headlines melt while they move and are crisp at rest: the filter only exists during the roll. */
@@ -4683,7 +4683,7 @@ document.documentElement.dataset.s = active;
   const pops = ['ask', 'fav'].map(id => document.getElementById(id));
   const sync = () => { const ak = pops.find(p => p.classList.contains('on')); const c = ak ? getComputedStyle(ak).backgroundColor : getComputedStyle(el).getPropertyValue('--bg').trim(); if (c && tc.content !== c) tc.content = c; };
   const mo = new MutationObserver(() => requestAnimationFrame(sync)); mo.observe(el, { attributes: true, attributeFilter: ['style', 'data-s', 'class'] }); pops.forEach(p => mo.observe(p, { attributes: true, attributeFilter: ['style', 'class'] })); sync(); }
-{ const pal = new URLSearchParams(location.search).get('palette'); if (['mono', 'bw', 'sherbet'].includes(pal)) document.documentElement.classList.add(pal); }
+{ const pal = new URLSearchParams(location.search).get('palette'), c = document.documentElement.classList; if (['mono', 'bw', 'classic'].includes(pal)) { c.remove('sherbet'); if (pal !== 'classic') c.add(pal); } }   // Sherbet is the default; ?palette=classic|mono|bw for the others
 tabEls.forEach(t => t.classList.toggle('on', t.dataset.s === active));
 kinetic($('name'), ['Patrick Branigan']);
 $('name').classList.add('k');

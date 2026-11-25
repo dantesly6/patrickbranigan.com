@@ -4,7 +4,7 @@ import SRC from '../site/signal.html?raw';
 import { getWritingItems, type WritingItem } from './writing';
 
 export const SITE = 'https://patrickbranigan.com';
-export const DESCRIPTION = 'Designer, maker, gamer. Head of Design at Workweek.';
+export const DESCRIPTION = 'Designer, maker, gamer. What I’ve built, what I’m thinking about, and what I’m playing.';
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const json = (v: unknown) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 
@@ -32,7 +32,7 @@ export function page({ path, title, description, type = 'website', open, noscrip
   swap('<!--HEAD-->', head);
   swap('<!--NOSCRIPT-->', `<noscript><main style="max-width:680px;margin:0 auto;padding:56px 20px 96px;font:17px/1.55 system-ui,sans-serif">${noscript}</main></noscript>`);
   swap('/*WRITING*/[]', json(data));
-  if (open) swap('<html lang="en" data-s="now">', '<html lang="en" data-s="thinking">');
+  if (open) swap('<html lang="en" data-s="now"', '<html lang="en" data-s="thinking"');
   return html;
 }
 
