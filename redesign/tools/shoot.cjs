@@ -9,7 +9,7 @@
 const path = require('path'), fs = require('fs');
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const out = path.resolve(process.argv[2] || 'redesign/shots');
-const URL = process.env.URL || 'http://localhost:4321/prototypes/signal-2.html';
+const URL = process.env.URL || 'http://localhost:4321/';
 const TABS = ['now', 'thinking', 'built', 'playing', 'newsletter'];
 
 (async () => {

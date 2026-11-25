@@ -6,10 +6,10 @@ Dev server needs Node 22: `source ~/.nvm/nvm.sh && nvm use 22 && npm run dev` (h
 
 ## Active work: portfolio redesign
 
-A redesign is in progress as a standalone prototype at `public/prototypes/signal-2.html`, on the `redesign/signal` branch. **Read `redesign/HANDOFF.md` before working on it.** It covers the direction, the rules Patrick has set, how the prototype is built, what is placeholder, and what is next.
+The redesign is the site: one self-contained page at `src/site/signal.html`, served at `/` and at each `/log/<slug>/` by `src/lib/site.ts` (on the `redesign/signal` branch until it is merged). **Read `redesign/HANDOFF.md` before working on it.** It covers the direction, the rules Patrick has set, how the prototype is built, what is placeholder, and what is next.
 
 ## Working with Patrick
 
 - Terse responses. He iterates by feel in the browser: make small, reversible changes and let him look.
-- Back up `signal-2.html` into `public/prototypes/_backup/` before each round of edits.
-- Never merge prototype work to `main` without asking: `main` deploys publicly.
+- Back up `src/site/signal.html` into `src/site/_backup/` before each round of edits.
+- Never merge to `main` without asking: `main` deploys publicly.

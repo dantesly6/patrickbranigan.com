@@ -2,7 +2,7 @@
 
 Everything needed to continue the patrickbranigan.com redesign in a fresh Claude session (any account). Start here, then open the prototype.
 
-**The prototype:** `public/prototypes/signal-2.html`. Run `npm run dev` (Node 22, see below) and open http://localhost:4321/prototypes/signal-2.html. It is a single self-contained HTML file and is the source of truth. There is no separate source or build step anymore. Edit it directly.
+**The site:** `src/site/signal.html` (the redesign, ported as a whole on 2026-11-24, see `LAUNCH.md`). Run `npm run dev` (Node 22, see below) and open http://localhost:4321/. It is one self-contained HTML file and is the source of truth: edit it directly. At build, `src/lib/site.ts` fills four placeholders (`<!--HEAD-->`, `<!--NOSCRIPT-->`, `/*WRITING*/[]`, and the entry to open) for `/` (`src/pages/index.astro`) and each `/log/<slug>/` (`src/pages/log/[slug].astro`).
 
 Status as of 2026-11-09: the prototype direction is accepted and being refined by feel. The real Astro site (`src/`) has not been touched by the redesign yet. The repo being public is fine; the work just has to stay independent of Workweek (no Workweek Claude account, no Workweek repos).
 
@@ -90,9 +90,16 @@ Replaces "last shipped." The current site's easter egg, restyled: a question fro
 ## 4. File map
 
 ```
-public/prototypes/
-  signal-2.html        THE prototype (≈210 KB, self-contained; writing entries and glyph outlines are embedded as JSON)
-  signal.html          v1, rejected (kept for reference only)
+src/site/
+  signal.html          THE site (≈210 KB, self-contained; glyph outlines embedded as JSON; writing filled in at build)
+  _backup/             dated snapshots before each round (gitignored)
+src/lib/site.ts        fills the placeholders: head tags, no-JS fallback, WRITING from src/content/writing, OPEN_ENTRY
+src/pages/             index.astro (/), log/[slug].astro (/log/<slug>/ opens that entry), sitemap.xml.ts
+public/
+  media/               light 720p copies of project videos; the Ribbon ones are cropped to the phone screen
+  cutouts/             boards cut apart into pieces + manifest.json (made by redesign/tools/cutout.py)
+redesign/reference/
+  signal-v1.html       v1, rejected (kept for reference only)
   type-goo.html        specimen of free "gooey" fonts + a liquid text filter (pending decision, see section 7)
   media/               light 720p copies of project videos; the Ribbon ones are cropped to the phone screen
   cutouts/             boards cut apart into pieces + manifest.json (made by redesign/tools/cutout.py)
@@ -106,7 +113,7 @@ redesign/
   tools/words.py       builds WORDS, the words spellable from the name (args: out.txt)
 ```
 
-Inside `signal-2.html` (search for these names):
+Inside `signal.html` (search for these names):
 - **Data:** `WRITING`, `PROJECTS`, `CHAPTERS`, `SETS`, `LIBRARY`, `GAMES`, `QA`, `GLYPHS`, `WORDS`; also `TZ`/`CITY`.
 - **Core:** `STREAMS` (the five tabs), `tune()` (page switch), `render()` (per-frame), `kinetic()`, `melt()`, `vt()` (view transitions: `dive`, `surface`, `lb`, `game`).
 - **Dock:** `moveBlob()`, `dockFrame()` (per-frame geometry for the liquid), `toast()`.
@@ -118,9 +125,9 @@ Inside `signal-2.html` (search for these names):
 
 ## 5. Data: what's real vs. placeholder
 
-- **Writing:** real, embedded from `src/content/writing` (published entries only; `_`-prefixed drafts excluded). **Re-export when entries are added:** the array is pasted in, so it is not live.
+- **Writing:** live: `WRITING` is filled at build from `src/content/writing` (published entries only; `_`-prefixed drafts excluded), so a new entry appears on the next deploy. An open entry's address is `/log/<slug>/`.
 - **Time:** `TZ = 'America/New_York'`, `CITY = 'New York'` (confirmed by Patrick, 2026-11-06). No visible clock since round 15; it drives night mode and the wake toast.
-- **Questions:** `QA` is copied from `src/layouts/Layout.astro`. Keep the two in sync until the port.
+- **Questions:** `QA` lives only in `signal.html` (the old `Layout.astro` is gone).
 - **Projects:** copy from the current site; media from `public/images/projects/`. **Workweek is parked:** Patrick is rethinking it around tangible product features, so it's out of `PROJECTS` and `CHAPTERS`. Its media and cut-outs stay on disk, and the old entries are in commit 0657b26.
 - **Library:** per-console counts copied from `src/pages/index.astro` (no titles exist). If he exports his collection with titles, the library can get per-game detail.
 - **Currently playing:** one game, `GAMES[0]`, with its rating out of 10 (hearts) and a cover in `public/images/playing/` (box art, cropped and resized to 480px). Now: Ocarina of Time on Switch 2, 10/10 (Patrick, 2026-11-24).
@@ -130,23 +137,23 @@ Inside `signal-2.html` (search for these names):
 ## 6. Working on it
 
 ```bash
-source ~/.nvm/nvm.sh && nvm use 22 && npm run dev   # http://localhost:4321/prototypes/signal-2.html
+source ~/.nvm/nvm.sh && nvm use 22 && npm run dev   # http://localhost:4321/
 ```
 
-- **Before each round of edits,** copy `signal-2.html` into `public/prototypes/_backup/` with a date or round suffix, so any round can be reverted.
+- **Before each round of edits,** copy `src/site/signal.html` into `src/site/_backup/` with a date or round suffix, so any round can be reverted.
 - **Verifying:**
   - `node redesign/tools/shoot.cjs` takes desktop and phone screenshots of every tab and reports page errors (see the file header for setup).
   - Headless screenshots catch single frames only; they can't judge motion. View Transition pseudo-layers don't show in them. On Now, moving the browser window also moves the letters, which can't be tested headless.
   - Test hooks: `room.spell('rain')` in the console runs a word; `room.debug` reads letter state; `?hour=3` starts the page asleep.
   - The Playwright MCP browser ran at about 2fps here and was unusable for this page.
 - **Deploy safety:**
-  - `public/prototypes/` deploys publicly if merged to `main` (Cloudflare Pages auto-deploys `main`).
+  - `main` is the live site (Cloudflare Pages auto-deploys it). Merging `redesign/signal` ships the redesign.
   - Branch pushes get Cloudflare preview URLs.
-  - Keep the prototype on the `redesign/signal` branch until it is meant to be seen.
+  - Never merge to `main` without Patrick's explicit OK.
 
 ## 7. Open threads and next steps
 
-1. **Port to Astro.** The prototype becomes the real site: streams become components, the data comes from content collections (writing is already one), and the Now signals read real sources. This is the big next step; agree the plan with Patrick first.
+1. **Port to Astro: lifted (2026-11-24).** The page is served whole from `src/site/signal.html`; writing and entry pages are live. Optional later: split streams into components and move projects, library, favorites and games into content collections (no visible change).
 2. **Typography.** Trying Fraunces headlines (SOFT 100) with melt during transitions, crisp at rest; `?type=sans` compares. He hasn't decided. He also liked Dia's headline face: **Exposure** by 205TF (paid; trial available; its exposure setting can be animated). `type-goo.html` holds the other free candidates.
 3. **Workweek in Built:** bring it back around tangible product features when he's ready.
 4. **Built:**

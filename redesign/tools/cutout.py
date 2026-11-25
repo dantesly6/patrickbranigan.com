@@ -1,7 +1,7 @@
 """Split presentation boards into their separate elements.
 
 Usage (from public/images/projects, in a venv with numpy, pillow, scipy):
-    python cutout.py . ../../prototypes/cutouts /tmp/cutout-debug ribbon/ui-elements.webp chaotic/comments.webp ...
+    python cutout.py . ../../cutouts /tmp/cutout-debug ribbon/ui-elements.webp chaotic/comments.webp ...
 
 Two modes, picked per image:
 - Boards that already have transparency (the artist cut them out): split on the alpha channel alone.

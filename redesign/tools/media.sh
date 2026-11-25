@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Rebuilds public/prototypes/media from the originals in public/images/projects.
+# Rebuilds public/media from the originals in public/images/projects.
 # Light 720p-ish H.264 copies, no audio, fast-start, for the prototype. Production should
 # compress the originals properly; the Chaotic reel original is 22 MB.
 set -euo pipefail
 cd "$(dirname "$0")/../../public/images/projects"
-OUT=../../prototypes/media
+OUT=../../media
 mkdir -p "$OUT"
 
 for p in chaotic/reel moonfallen/site; do

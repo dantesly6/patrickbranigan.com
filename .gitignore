@@ -27,7 +27,7 @@ pnpm-debug.log*
 .obsidian/
 
 # redesign prototype: local snapshots and screenshot output
-public/prototypes/_backup/
+src/site/_backup/
 redesign/shots/
 
 # Playwright MCP snapshots and screenshots
