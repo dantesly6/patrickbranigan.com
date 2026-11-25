@@ -2,7 +2,11 @@
 
 Written 2026-11-24.
 
-## Status (2026-11-24, evening): lift done on `redesign/signal`; not pushed, not merged
+## Status: LIVE (2026-11-24). Merged to `main` as 8ac514e; the previous site is tagged `site-v1`.
+
+Undo: Cloudflare Pages > patrickbranigan-com > Deployments > roll back to the deployment before 8ac514e, then `git revert -m 1 8ac514e` on `main`.
+
+### How it got there
 
 Patrick: "do whatever is going to make my site exactly like what we've arrived at with this redesign prototype. Do it in the most efficient way."
 
@@ -13,12 +17,7 @@ Patrick: "do whatever is going to make my site exactly like what we've arrived a
   - Media and cutouts moved to `/media` and `/cutouts`.
   - Old site code removed (Layout, Reading, HeroGame, Wall, global.css, `flight.ts`, the D1 migration). Prototype v1 and `type-goo.html` moved to `redesign/reference/`.
   - Verified with `astro build` and a headless check on desktop and phone: every route loads, no page errors, no failed requests.
-- Left:
-  - push the branch;
-  - check the Pages preview on a phone;
-  - one real signup on the preview;
-  - tag `main` as `site-v1`;
-  - merge with Patrick's explicit OK.
+- Then: branch pushed, preview checked (desktop + phone, no errors), `site-v1` tagged, merged by Patrick, production checked the same way. The newsletter function was checked with a malformed address (400 invalid_email); no real signup was made.
 
 ## Where things stand
 
