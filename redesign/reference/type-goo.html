@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gooey Type</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,100..900,0..100,0..1&family=Climate+Crisis:YEAR@1979..2050&family=Ojuju:wght@200..800&family=Gluten:wght@100..900&family=Kablammo:MORF@0..60&family=Bagel+Fat+One&display=swap">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@500,600&display=swap">
+<style>
+  /* A specimen of free type that reads as gooey, each animated along what makes it gooey.
+     Rows loop on their own; move across a row to scrub it by hand. */
+  :root { --bg: #18233d; --ink: #f1eee6; --soft: rgba(241,238,230,.5); }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: 'General Sans', system-ui, sans-serif; padding: 48px 36px 96px; }
+  header { max-width: 1100px; margin: 0 auto 28px; }
+  header h1 { font-size: 15px; font-weight: 600; }
+  header p { margin-top: 6px; font-size: 14px; color: var(--soft); max-width: 640px; line-height: 1.5; }
+  .row { max-width: 1100px; margin: 0 auto; padding: 34px 0 30px; border-top: 1px solid rgba(241,238,230,.12); cursor: ew-resize; }
+  .meta { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; color: var(--soft); margin-bottom: 14px; }
+  .meta b { color: var(--ink); font-weight: 600; }
+  .t { font-size: clamp(40px, 6.6vw, 96px); line-height: 1; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; }
+
+  .fraunces { font-family: 'Fraunces', serif; animation: inflate 4.2s cubic-bezier(.45,0,.55,1) infinite alternate; }
+  @keyframes inflate {
+    from { font-variation-settings: 'opsz' 144, 'wght' 250, 'SOFT' 0, 'WONK' 0; }
+    to   { font-variation-settings: 'opsz' 144, 'wght' 900, 'SOFT' 100, 'WONK' 1; }
+  }
+  .climate { font-family: 'Climate Crisis', sans-serif; animation: melt 5s cubic-bezier(.45,0,.55,1) infinite alternate; }
+  @keyframes melt { from { font-variation-settings: 'YEAR' 1979; } to { font-variation-settings: 'YEAR' 2050; } }
+  .ojuju { font-family: 'Ojuju', sans-serif; animation: swell 3.6s cubic-bezier(.45,0,.55,1) infinite alternate; }
+  @keyframes swell { from { font-variation-settings: 'wght' 200; } to { font-variation-settings: 'wght' 800; } }
+  .gluten { font-family: 'Gluten', cursive; animation: glut 3.8s cubic-bezier(.45,0,.55,1) infinite alternate; }
+  @keyframes glut { from { font-variation-settings: 'wght' 100; } to { font-variation-settings: 'wght' 900; } }
+  .kablammo { font-family: 'Kablammo', sans-serif; animation: morf 2.6s cubic-bezier(.45,0,.55,1) infinite alternate; }
+  @keyframes morf { from { font-variation-settings: 'MORF' 0; } to { font-variation-settings: 'MORF' 60; } }
+  .liquid { font-family: 'General Sans', sans-serif; font-weight: 600; filter: url(#liquid); }
+  .bagel { font-family: 'Bagel Fat One', sans-serif; filter: url(#liquid2); }
+  .row.held .t { animation: none; }
+  @media (prefers-reduced-motion: reduce) { .t { animation: none !important; } }
+  @media (max-width: 700px) { body { padding: 28px 16px 64px; } .meta { flex-direction: column; gap: 2px; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="liquid"><feGaussianBlur id="b1" in="SourceGraphic" stdDeviation="0" /><feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -12" /></filter>
+  <filter id="liquid2"><feGaussianBlur id="b2" in="SourceGraphic" stdDeviation="0" /><feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -12" /></filter>
+</svg>
+
+<header>
+  <h1>Gooey type, free and animatable</h1>
+  <p>Each row loops along the setting that makes it gooey. Move across a row to scrub it by hand; leave and it carries on. All free on Google Fonts, except the last two rows, which are a technique, not a font.</p>
+</header>
+
+<section class="row" data-axis="fraunces"><div class="meta"><span><b>Fraunces</b> · Google Fonts, free</span><span>weight 250→900 · SOFT 0→100 · WONK</span></div><div class="t fraunces">Building the Builder Stack.</div></section>
+<section class="row" data-axis="climate"><div class="meta"><span><b>Climate Crisis</b> · Google Fonts, free</span><span>YEAR 1979→2050 (it melts)</span></div><div class="t climate">Building the Stack.</div></section>
+<section class="row" data-axis="ojuju"><div class="meta"><span><b>Ojuju</b> · Google Fonts, free</span><span>weight 200→800</span></div><div class="t ojuju">Building the Builder Stack.</div></section>
+<section class="row" data-axis="gluten"><div class="meta"><span><b>Gluten</b> · Google Fonts, free</span><span>weight 100→900</span></div><div class="t gluten">Building the Builder Stack.</div></section>
+<section class="row" data-axis="kablammo"><div class="meta"><span><b>Kablammo</b> · Google Fonts, free</span><span>MORF 0→60 (wobble)</span></div><div class="t kablammo">Building the Stack.</div></section>
+<section class="row" data-axis="liquid"><div class="meta"><span><b>Liquid filter on General Sans</b> · your current font</span><span>the dock's goo, applied to type: letters melt together and set</span></div><div class="t liquid">Building the Builder Stack.</div></section>
+<section class="row" data-axis="bagel"><div class="meta"><span><b>Bagel Fat One + liquid filter</b> · Google Fonts, free</span><span>an already soft face, melted further</span></div><div class="t bagel">Building the Stack.</div></section>
+
+<script>
+  // Scrub: pointer position across a row sets the animation's place in its loop.
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ranges = {
+    fraunces: x => `'opsz' 144, 'wght' ${250 + x * 650}, 'SOFT' ${x * 100}, 'WONK' ${x > .5 ? 1 : 0}`,
+    climate: x => `'YEAR' ${1979 + x * 71}`,
+    ojuju: x => `'wght' ${200 + x * 600}`,
+    gluten: x => `'wght' ${100 + x * 800}`,
+    kablammo: x => `'MORF' ${x * 60}`,
+  };
+  const blur = { liquid: 0, bagel: 0 }, held = { liquid: null, bagel: null };
+  document.querySelectorAll('.row').forEach(row => {
+    const t = row.querySelector('.t'), axis = row.dataset.axis;
+    row.addEventListener('pointermove', e => {
+      const r = row.getBoundingClientRect(), x = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+      row.classList.add('held');
+      if (ranges[axis]) t.style.fontVariationSettings = ranges[axis](x);
+      else held[axis] = x;
+    });
+    row.addEventListener('pointerleave', () => { row.classList.remove('held'); t.style.fontVariationSettings = ''; held[axis] = null; });
+  });
+  // The liquid rows: blur strength swells and settles; the alpha threshold keeps edges crisp,
+  // so letters read as liquid that pools together and then sets.
+  const b1 = document.getElementById('b1'), b2 = document.getElementById('b2');
+  function tick(now) {
+    const wave = (now / 1000) % 4.4, k = reduced ? 0 : Math.max(0, Math.sin(wave / 4.4 * Math.PI)) ** 2;
+    b1.setAttribute('stdDeviation', ((held.liquid ?? k) * 5).toFixed(2));
+    b2.setAttribute('stdDeviation', ((held.bagel ?? k) * 4).toFixed(2));
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+</script>
+</body>
+</html>

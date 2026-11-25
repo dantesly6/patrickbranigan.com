@@ -25,3 +25,10 @@ pnpm-debug.log*
 
 # obsidian vault config (local editor only)
 .obsidian/
+
+# redesign prototype: local snapshots and screenshot output
+src/site/_backup/
+redesign/shots/
+
+# Playwright MCP snapshots and screenshots
+.playwright-mcp/

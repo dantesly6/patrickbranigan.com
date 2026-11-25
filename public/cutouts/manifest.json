@@ -1,0 +1,208 @@
+{
+ "chaotic/comments.webp": {
+  "w": 3000,
+  "h": 1500,
+  "bg": [
+   255,
+   0,
+   255
+  ],
+  "pieces": [
+   {
+    "src": "chaotic-comments-0.webp",
+    "x": 0,
+    "y": 0,
+    "w": 2029,
+    "h": 1500
+   },
+   {
+    "src": "chaotic-comments-1.webp",
+    "x": 2057,
+    "y": 0,
+    "w": 456,
+    "h": 1500
+   },
+   {
+    "src": "chaotic-comments-2.webp",
+    "x": 2542,
+    "y": 0,
+    "w": 458,
+    "h": 1500
+   }
+  ]
+ },
+ "chaotic/content-module.webp": {
+  "w": 2878,
+  "h": 2534,
+  "bg": [
+   255,
+   0,
+   255
+  ],
+  "pieces": [
+   {
+    "src": "chaotic-content-module-0.webp",
+    "x": 0,
+    "y": 0,
+    "w": 2876,
+    "h": 432
+   },
+   {
+    "src": "chaotic-content-module-1.webp",
+    "x": 2,
+    "y": 472,
+    "w": 2876,
+    "h": 960
+   },
+   {
+    "src": "chaotic-content-module-2.webp",
+    "x": 2,
+    "y": 1472,
+    "w": 2876,
+    "h": 1062
+   }
+  ]
+ },
+ "ribbon/cashapp.webp": {
+  "w": 2710,
+  "h": 1704,
+  "bg": [
+   255,
+   0,
+   255
+  ],
+  "pieces": [
+   {
+    "src": "ribbon-cashapp-0.webp",
+    "x": 0,
+    "y": 0,
+    "w": 839,
+    "h": 1704
+   },
+   {
+    "src": "ribbon-cashapp-1.webp",
+    "x": 935,
+    "y": 0,
+    "w": 840,
+    "h": 1704
+   },
+   {
+    "src": "ribbon-cashapp-2.webp",
+    "x": 1871,
+    "y": 0,
+    "w": 839,
+    "h": 1704
+   }
+  ]
+ },
+ "ribbon/ui-elements.webp": {
+  "w": 3000,
+  "h": 1892,
+  "bg": [
+   255,
+   0,
+   255
+  ],
+  "pieces": [
+   {
+    "src": "ribbon-ui-elements-0.webp",
+    "x": 670,
+    "y": 73,
+    "w": 531,
+    "h": 452
+   },
+   {
+    "src": "ribbon-ui-elements-1.webp",
+    "x": 1263,
+    "y": 0,
+    "w": 531,
+    "h": 525
+   },
+   {
+    "src": "ribbon-ui-elements-2.webp",
+    "x": 1856,
+    "y": 73,
+    "w": 552,
+    "h": 1223
+   },
+   {
+    "src": "ribbon-ui-elements-3.webp",
+    "x": 0,
+    "y": 220,
+    "w": 607,
+    "h": 1452
+   },
+   {
+    "src": "ribbon-ui-elements-4.webp",
+    "x": 2470,
+    "y": 136,
+    "w": 530,
+    "h": 1160
+   },
+   {
+    "src": "ribbon-ui-elements-5.webp",
+    "x": 670,
+    "y": 587,
+    "w": 1124,
+    "h": 902
+   },
+   {
+    "src": "ribbon-ui-elements-6.webp",
+    "x": 1856,
+    "y": 1359,
+    "w": 1043,
+    "h": 413
+   },
+   {
+    "src": "ribbon-ui-elements-7.webp",
+    "x": 670,
+    "y": 1551,
+    "w": 510,
+    "h": 341
+   },
+   {
+    "src": "ribbon-ui-elements-8.webp",
+    "x": 1242,
+    "y": 1551,
+    "w": 552,
+    "h": 274
+   }
+  ]
+ },
+ "workweek/05-slack.webp": {
+  "w": 2286,
+  "h": 1280,
+  "bg": [
+   28,
+   29,
+   33
+  ],
+  "pieces": [
+   {
+    "src": "workweek-05-slack-0.webp",
+    "x": 123,
+    "y": 160,
+    "w": 2004,
+    "h": 950
+   }
+  ]
+ },
+ "workweek/06-figma-plugin.webp": {
+  "w": 3000,
+  "h": 992,
+  "bg": [
+   229,
+   229,
+   229
+  ],
+  "pieces": [
+   {
+    "src": "workweek-06-figma-plugin-0.webp",
+    "x": 1187,
+    "y": 231,
+    "w": 630,
+    "h": 548
+   }
+  ]
+ }
+}
